@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import UserList from './components/UserList'
+import TicketList from './components/TicketList';
 
 function App() {
 
   return (
    <div className="App">
-    <UserList />
+    <TicketList />
    </div>
   );
 }

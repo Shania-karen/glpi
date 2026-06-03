@@ -9,6 +9,10 @@ export default defineConfig({
         target: 'http://glpi.local:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-glpi/, '')
+      },
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
       }
     }
   }
