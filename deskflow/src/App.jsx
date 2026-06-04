@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import TicketList from './components/TicketList';
+import TicketList from './components/ticket/TicketList';
 
 function App() {
 
