@@ -5,11 +5,13 @@ import { useState } from 'react';
 
 export default function TicketModal({ ticket, users, onClose, onSaved }) {
   const [formData, setFormData] = useState({ ...initialFormData, ...(ticket || {}) });
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       if (ticket) {
         await fetchGlpiData(`Assistance/Ticket/${ticket.id}`, { method: 'PATCH', body: { id: ticket.id, ...formData } });
@@ -20,6 +22,7 @@ export default function TicketModal({ ticket, users, onClose, onSaved }) {
       onClose();
     } catch (err) {
       alert("Erreur : " + err.message);
+      setIsSubmitting(false);
     }
   };
 
@@ -29,8 +32,10 @@ export default function TicketModal({ ticket, users, onClose, onSaved }) {
         <h3>{ticket ? `Modifier le ticket #${ticket.id}` : 'Créer un ticket'}</h3>
         <form onSubmit={handleSubmit}>
           <TicketForm formData={formData} onChange={handleChange} users={users} />
-          <button type="submit">Sauvegarder</button>
-          <button type="button" onClick={onClose}>Annuler</button>
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+          <button type="button" onClick={onClose} disabled={isSubmitting}>Annuler</button>
         </form>
       </div>
     </div>

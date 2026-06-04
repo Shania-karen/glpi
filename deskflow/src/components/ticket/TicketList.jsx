@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { useTickets } from '../../hooks/useTicket';
 import { useUsers } from '../../hooks/useUser';
 import { exportTicketsToCSV } from '../../utils/csvHelper';
+import{ parseCSVToTickets } from '../../utils/importHelper';  
+import { processTicketImport } from '../../utils/importHelper';
 import TicketModal from './TicketModal';
+import ResetForm from './ResetForm';
 
 export default function TicketList() {
   const { tickets, loading, error, loadTickets } = useTickets();
@@ -11,14 +14,38 @@ export default function TicketList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentTicket, setCurrentTicket] = useState(null);
 
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
   const handleFileUpload = async (event) => {
   const file = event.target.files[0];
-  if (!file) return; 
-  const lines = textContent.split('\n'); 
-  const dataLines = lines.slice(1);
-  console.log(dataLines); 
-};
+  if (!file) return;
+  const textContent = await file.text();
+  const ticketsToImport = parseCSVToTickets(textContent);
 
+  if (ticketsToImport.length === 0) {
+    alert("Aucun ticket valide trouvé dans le fichier.");
+    event.target.value = null;
+    return;
+  }
+  setIsImporting(true);
+  setImportProgress({ current: 0, total: ticketsToImport.length });
+  try {
+      const successCount = await processTicketImport(file, (current, total) => {
+        setImportProgress({ current, total });
+      });
+
+      alert(` Importation terminée avec succès !\n${successCount} tickets créés.`);
+      
+    } catch (error) {
+      alert(` ${error.message}`);
+      
+    } finally {
+      setIsImporting(false);
+      loadTickets();
+      event.target.value = null;
+    }
+};
   const openModalForCreate = () => {
     setCurrentTicket(null);
     setIsModalOpen(true);
@@ -28,7 +55,6 @@ export default function TicketList() {
     setCurrentTicket(ticket);
     setIsModalOpen(true);
   };
-
   return (
     <div className="ticket-manager">
       <h1>Gestion des Tickets GLPI</h1>
@@ -38,7 +64,10 @@ export default function TicketList() {
       <button onClick={handleExportCSV} style={{ marginBottom: '15px' }}>
         Exporter en CSV
       </button>
-
+      <label>
+          Importer depuis CSV 
+          <input type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileUpload} />
+        </label>
       <input 
         type="file" 
         accept=".csv" 
@@ -99,6 +128,11 @@ export default function TicketList() {
           </tbody>
         </table>
       )}
+      {isImporting && (
+        <div style={{ padding: '10px', backgroundColor: '#fff3cd', color: '#856404', marginBottom: '15px' }}>
+           Importation en cours : {importProgress.current} / {importProgress.total} tickets traités...
+        </div>
+      )}
 
       {isModalOpen && (
         <TicketModal
@@ -108,6 +142,7 @@ export default function TicketList() {
           onSaved={loadTickets}
         />
       )}
+      <ResetForm onResetComplete={loadTickets} />
     </div>
   );
 }

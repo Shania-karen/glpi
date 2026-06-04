@@ -1,6 +1,9 @@
 export const BASE_URL = '/api-glpi/api.php/v2.3';
+export const API_REST_URL = '/api-glpi/apirest.php';
 export const TOKEN_URL = '/api-glpi/api.php/token'; 
 export const APP_TOKEN = 'RlEaH5TceSTvlhGuEsWOH3Be1bHAtYQS2rVE7fKKP'; 
+export const USER_TOKEN = 'RlEaH5TceSTvlhGuEsWOH3Be1bHAtYQS2rVE7flK';
+export const TEMP_SESSION_TOKEN = 'blFkRXVobWxnUlFiVFYwTmFaSVNPNFpyOE94VzRHMGYzMDEzblFHUUgvTHA3RjJPS3MxWU1QaEFCTlh5YVRxb0ZwdERva0pJL0ZYd005NHhZNU5TOWRtSQ==';
 
 let currentAccessToken = null;
 async function refreshAccessToken() {
@@ -49,7 +52,7 @@ export async function fetchGlpiData(resourcePath, options={}) {
 
   let response = await fetch(url, fetchOptions);
 
-  if (response.status === 400 || response.status === 401) {
+  if (response.status === 401) {
     console.warn(" Token expiré, renouvellement en cours...");
     await refreshAccessToken();
     headers['Authorization'] = `Bearer ${currentAccessToken}`;
@@ -63,5 +66,40 @@ export async function fetchGlpiData(resourcePath, options={}) {
   const textResponse = await response.text();
   return textResponse ? JSON.parse(textResponse) : null;
 }
+export async function fetchDataAPIRest(resourcePath, options={}) {
+  const method = options.method || 'GET';
+  const body = options.body ? JSON.stringify(options.body) : null;
+  if (!currentAccessToken) {
+    await refreshAccessToken();
+  }
+  const url = `${API_REST_URL}/${resourcePath}`;
+  const headers= {
+    'Content-Type': 'application/json',
+    'App-Token': APP_TOKEN,
+    'Session-Token': TEMP_SESSION_TOKEN
+  };
+  if( method ==='GET'){
+    delete headers['Content-Type'];
+  }
+  const fetchOptions = { method, headers };
+  if (body && method !== 'GET') {
+    fetchOptions.body = body;
+  }
 
+  let response = await fetch(url, fetchOptions);
+
+  if (response.status === 401) {
+    console.warn(" Token expiré, renouvellement en cours...");
+    await refreshAccessToken();
+    headers['Authorization'] = `Bearer ${currentAccessToken}`;
+    response = await fetch(url, fetchOptions);
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Erreur API GLPI (Statut ${response.status}) : ${errorText}`);
+  }
+  const textResponse = await response.text();
+  return textResponse ? JSON.parse(textResponse) : null;
+}
 
