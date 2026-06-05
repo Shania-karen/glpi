@@ -10,8 +10,8 @@ export function useTickets() {
     setLoading(true);
     try {
       const data = await fetchGlpiData('Assistance/Ticket?expand_dropdowns=true');
-      const activeTickets = data.filter(ticket => ticket.is_deleted !== true);
-      setTickets(activeTickets);
+     // const activeTickets = data.filter(ticket => ticket.is_deleted !== true);
+      setTickets(data);
     } catch (err) {
       setError(err.message);
     } finally {

@@ -2,8 +2,9 @@ import TicketForm from './TicketForm';
 import { fetchGlpiData } from '../../services/apiClient';
 import { initialFormData } from '../../utils/TicketHelper';
 import { useState } from 'react';
+import { Modal, Button } from '../templates';
 
-export default function TicketModal({ ticket, users, onClose, onSaved }) {
+export default function TicketModal({ ticket, users, assets, onClose, onSaved }) {
   const [formData, setFormData] = useState({ ...initialFormData, ...(ticket || {}) });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -27,17 +28,25 @@ export default function TicketModal({ ticket, users, onClose, onSaved }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: 'white', borderRadius: '8px', padding: '24px', width: '640px', maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-        <h3>{ticket ? `Modifier le ticket #${ticket.id}` : 'Créer un ticket'}</h3>
-        <form onSubmit={handleSubmit}>
-          <TicketForm formData={formData} onChange={handleChange} users={users} />
-          <button type="submit" disabled={isSubmitting}>
+    <Modal
+      title={ticket ? `Modifier le ticket #${ticket.id}` : 'Creer un ticket'}
+      open={true}
+      onClose={onClose}
+      className="max-w-2xl"
+    >
+      <form onSubmit={handleSubmit}>
+        <Modal.Body>
+          <TicketForm formData={formData} onChange={handleChange} users={users} assets={assets} />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
+            Annuler
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}
-          </button>
-          <button type="button" onClick={onClose} disabled={isSubmitting}>Annuler</button>
-        </form>
-      </div>
-    </div>
+          </Button>
+        </Modal.Footer>
+      </form>
+    </Modal>
   );
 }

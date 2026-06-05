@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { purgeSelectedTables } from '../../utils/resetHelper';
+import { H3, P, Button, Card, Alert } from '../templates';
 
 export default function ResetForm({ onResetComplete }) {
   const availableTables = [
-    { label: 'Tickets d\'assistance', endpoint: 'Ticket' },
- 
+    { label: "Tickets d'assistance", endpoint: 'Ticket' },
   ];
 
   const [selectedTables, setSelectedTables] = useState([]);
@@ -12,10 +12,10 @@ export default function ResetForm({ onResetComplete }) {
   const [statusMessage, setStatusMessage] = useState('');
 
   const handleCheckboxChange = (endpoint) => {
-    setSelectedTables(prev => 
-      prev.includes(endpoint) 
-        ? prev.filter(t => t !== endpoint) 
-        : [...prev, endpoint]          
+    setSelectedTables(prev =>
+      prev.includes(endpoint)
+        ? prev.filter(t => t !== endpoint)
+        : [...prev, endpoint]
     );
   };
 
@@ -23,29 +23,28 @@ export default function ResetForm({ onResetComplete }) {
     e.preventDefault();
 
     if (selectedTables.length === 0) {
-      alert("Veuillez sélectionner au moins une table à réinitialiser.");
+      alert("Veuillez selectionner au moins une table a reinitialiser.");
       return;
     }
     const confirm = window.confirm(
-      " ATTENTION : Vous êtes sur le point de supprimer DÉFINITIVEMENT toutes les données des tables sélectionnées via l'API. Cette action est irréversible. Voulez-vous continuer ?"
+      "ATTENTION : Vous etes sur le point de supprimer DEFINITIVEMENT toutes les donnees des tables selectionnees via l'API. Cette action est irreversible. Voulez-vous continuer ?"
     );
     if (!confirm) return;
 
     setIsPurging(true);
-    setStatusMessage('Démarrage de la purge...');
+    setStatusMessage('Demarrage de la purge...');
 
     try {
       const deletedCount = await purgeSelectedTables(selectedTables, (message, current, total) => {
         setStatusMessage(`${message} (${current}/${total})`);
       });
 
-      alert(` Réinitialisation terminée.\n${deletedCount} élément(s) supprimé(s).`);
+      alert(`Reinitialisation terminee.\n${deletedCount} element(s) supprime(s).`);
       if (onResetComplete) onResetComplete();
-  
       setSelectedTables([]);
 
     } catch (error) {
-      alert(` Erreur lors de la réinitialisation : ${error.message}`);
+      alert(`Erreur lors de la reinitialisation : ${error.message}`);
     } finally {
       setIsPurging(false);
       setStatusMessage('');
@@ -53,36 +52,41 @@ export default function ResetForm({ onResetComplete }) {
   };
 
   return (
-    <div >
-      <form onSubmit={handleResetSubmit}>
-        <p>Sélectionnez les tables à vider via l'API :</p>
-        
-        <div style={{ marginBottom: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {availableTables.map((table) => (
-            <label key={table.endpoint} style={{ cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                value={table.endpoint}
-                checked={selectedTables.includes(table.endpoint)}
-                onChange={() => handleCheckboxChange(table.endpoint)}
-                disabled={isPurging}
-                style={{ marginRight: '8px' }}
-              />
-              {table.label} <small style={{ color: '#666' }}>({table.endpoint})</small>
-            </label>
-          ))}
-        </div>
+    <Card>
+      <Card.Body>
+        <H3 className="mb-4">Reinitialisation des donnees</H3>
+        <form onSubmit={handleResetSubmit}>
+          <P className="mb-3">Selectionnez les tables a vider via l'API :</P>
 
-        <button 
-          type="submit" 
-          disabled={isPurging || selectedTables.length === 0}
-          style={{ backgroundColor: '#dc3545', color: 'white', opacity: isPurging ? 0.7 : 1 }}
-        >
-          {isPurging ? 'Purge en cours...' : 'Vider les tables sélectionnées '}
-        </button>
+          <div className="flex flex-col gap-2 mb-4">
+            {availableTables.map((table) => (
+              <label key={table.endpoint} className="flex items-center gap-2 cursor-pointer text-sm text-neutral-700">
+                <input
+                  type="checkbox"
+                  value={table.endpoint}
+                  checked={selectedTables.includes(table.endpoint)}
+                  onChange={() => handleCheckboxChange(table.endpoint)}
+                  disabled={isPurging}
+                  className="accent-black"
+                />
+                {table.label}
+                <span className="text-neutral-400 text-xs">({table.endpoint})</span>
+              </label>
+            ))}
+          </div>
 
-        {statusMessage && <p style={{ color: '#dc3545', fontWeight: 'bold', marginTop: '10px' }}> {statusMessage}</p>}
-      </form>
-    </div>
+          <Button
+            type="submit"
+            disabled={isPurging || selectedTables.length === 0}
+          >
+            {isPurging ? 'Purge en cours...' : 'Vider les tables selectionnees'}
+          </Button>
+
+          {statusMessage && (
+            <Alert className="mt-4">{statusMessage}</Alert>
+          )}
+        </form>
+      </Card.Body>
+    </Card>
   );
 }
