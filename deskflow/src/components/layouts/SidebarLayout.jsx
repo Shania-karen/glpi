@@ -1,15 +1,25 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { TicketIcon, HomeIcon } from '../templates';
-
-const navItems = [
-  { to: '/', label: 'Accueil', icon: HomeIcon },
-  { to: '/tickets', label: 'Tickets', icon: TicketIcon },
-  { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
-];
 
 export default function SidebarLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation(); 
+
+  const isBackOfficeAuth = sessionStorage.getItem('isBackOfficeAuth') === 'true';
+
+  const navItems = [
+    { to: '/', label: 'Accueil', icon: HomeIcon },
+    
+    !isBackOfficeAuth && { to: '/tickets', label: 'Tickets', icon: TicketIcon },
+    !isBackOfficeAuth && { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
+    !isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
+    
+    isBackOfficeAuth && { to: '/reset', label: 'Reset', icon: TicketIcon },
+    isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
+    isBackOfficeAuth && { to: '/Import', label: 'Import', icon: TicketIcon },
+    isBackOfficeAuth && { to: '/Dashboard', label: 'Dashboard', icon: TicketIcon },
+  ].filter(Boolean);
 
   return (
     <div className="flex h-screen bg-white">

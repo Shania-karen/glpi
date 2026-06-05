@@ -3,6 +3,9 @@ import SidebarLayout from './components/layouts/SidebarLayout';
 import Accueil from './pages/Accueil';
 import ExempleUI from './pages/ExempleUI';
 import TicketList from './components/ticket/TicketList';
+import BackOffice from './components/backoffice/BackOffice';
+import ResetForm from './components/ticket/ResetForm';
+import Dashboard from './components/backoffice/Dashboard';
 
 function App() {
   return (
@@ -12,6 +15,9 @@ function App() {
           <Route index element={<Accueil />} />
           <Route path="tickets" element={<TicketList />} />
           <Route path="exemple" element={<ExempleUI />} />
+          <Route path="backoffice" element={<BackOffice />} />
+          <Route path="reset" element={<ResetForm />} />
+          <Route path="dashboard" element={<Dashboard />} />
         </Route>
       </Routes>
     </BrowserRouter>
