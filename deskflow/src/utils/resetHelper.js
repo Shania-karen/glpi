@@ -4,7 +4,7 @@ export const purgeSelectedTables = async (endpoints, onProgress) => {
   let totalDeleted = 0;
   for (const endpoint of endpoints) {
     try {
-      const items = await fetchDataAPIRest(`${endpoint}?range=0-1000`, { method: 'GET' });
+      const items = await fetchDataAPIRest(`/${endpoint}?range=0-1000`, { method: 'GET' });
       if (!items || items.length === 0) {
         console.log(`Aucune donnée à supprimer dans ${endpoint}.`);
         continue;

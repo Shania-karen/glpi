@@ -56,7 +56,7 @@ export const processTicketImport = async (file, onProgress) => {
     const ticket = ticketsToImport[i];
     
     try {
-      const response = await fetchGlpiData('Assistance/Ticket', { 
+      const response = await fetchGlpiData('/Assistance/Ticket', { 
         method: 'POST', 
         body: ticket 
         
@@ -74,7 +74,7 @@ export const processTicketImport = async (file, onProgress) => {
     
       for (const idToDelete of createdTicketIds) {
         try {
-          await fetchGlpiData(`Assistance/Ticket/${idToDelete}?force_purge=true`, {
+          await fetchGlpiData(`/Assistance/Ticket/${idToDelete}?force_purge=true`, {
             method: 'DELETE'
           });
         } catch (rollbackErr) {

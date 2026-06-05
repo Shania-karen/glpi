@@ -38,36 +38,6 @@ export async function fetchGlpiData(resourcePath, options = {}) {
 
   const axiosConfig = {
     method: options.method || 'GET',
-    url: `${BASE_URL}/${resourcePath}`,
-    headers: {
-      'App-Token': APP_TOKEN,
-      'Authorization': `Bearer ${currentAccessToken}`
-    },
-    data: options.body 
-  };
-  try {
-    const response = await axios(axiosConfig);
-    return response.data; 
-  } catch (error) {
-    if (error.response && error.response.status === 401) {
-      console.warn("Token expiré, renouvellement en cours...");
-      await refreshAccessToken();
-    
-      axiosConfig.headers['Authorization'] = `Bearer ${currentAccessToken}`;
-      const retryResponse = await axios(axiosConfig);
-      return retryResponse.data;
-    }
-    const errorText = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-    throw new Error(`Erreur API GLPI (Statut ${error.response?.status}) : ${errorText}`);
-  }
-}
-
-export async function fetchGlpiAPI(resourcePath, options = {}) {
-  if (!currentAccessToken) {
-    await refreshAccessToken();
-  }
-  const axiosConfig = {
-    method: options.method || 'GET',
     url: `${BASE_URL}${resourcePath}`,
     headers: {
       'App-Token': APP_TOKEN,
@@ -91,6 +61,7 @@ export async function fetchGlpiAPI(resourcePath, options = {}) {
     throw new Error(`Erreur API GLPI (Statut ${error.response?.status}) : ${errorText}`);
   }
 }
+
 export async function fetchDataAPIRest(resourcePath, options = {}) {
   if (!currentAccessToken) {
     await refreshAccessToken();

@@ -4,6 +4,7 @@ import { useUsers } from '../../hooks/useUser';
 import { exportTicketsToCSV } from '../../utils/csvHelper';
 import { parseCSVToTickets, processTicketImport } from '../../utils/importHelper';
 import TicketModal from './TicketModal';
+import TicketDetailModal from './TicketDetailModal';
 import ResetForm from './ResetForm';
 import { useAssets } from '../../hooks/useAssets';
 import { TicketIcon , ExportIcon,ImportIcon } from '../templates';
@@ -16,6 +17,7 @@ export default function TicketList() {
   const handleExportCSV = () => exportTicketsToCSV(tickets);
   const { users } = useUsers();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [currentTicket, setCurrentTicket] = useState(null);
   const { assets } = useAssets();
 
@@ -57,6 +59,11 @@ export default function TicketList() {
   const openModalForEdit = (ticket) => {
     setCurrentTicket(ticket);
     setIsModalOpen(true);
+  };
+
+  const openModalForDetails = (ticket) => {
+    setCurrentTicket(ticket);
+    setIsDetailModalOpen(true);
   };
 
   const getStatusVariant = (status) => {
@@ -148,6 +155,9 @@ export default function TicketList() {
                   <Td>{ticket.category?.name || 'Sans categorie'}</Td>
                   <Td>
                     <div className="flex gap-2">
+                      <Button size="sm" variant="success" onClick={() => openModalForDetails(ticket)}>
+                        Traiter
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => openModalForEdit(ticket)}>
                         Modifier
                       </Button>
@@ -169,7 +179,7 @@ export default function TicketList() {
         </Table>
       )}
 
-      {/* Modal */}
+      {/* Modals */}
       {isModalOpen && (
         <TicketModal
           ticket={currentTicket}
@@ -180,10 +190,17 @@ export default function TicketList() {
         />
       )}
 
+      {isDetailModalOpen && (
+        <TicketDetailModal
+          ticket={currentTicket}
+          users={users}
+          onClose={() => setIsDetailModalOpen(false)}
+          onSaved={loadTickets}
+        />
+      )}
+
       <Divider />
 
-      {/* Reset */}
-      <ResetForm onResetComplete={loadTickets} />
     </div>
   );
 }

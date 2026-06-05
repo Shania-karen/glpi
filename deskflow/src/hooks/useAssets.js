@@ -9,7 +9,7 @@ export function useAssets(){
     const loadAssets=async()=>{
         setLoading(true);
         try{
-            const data = await fetchGlpiData('Assets?expand_dropdowns=true');
+            const data = await fetchGlpiData('/Assets?expand_dropdowns=true');
             setAssets(data);
         }catch(err){
             setError(err.message);

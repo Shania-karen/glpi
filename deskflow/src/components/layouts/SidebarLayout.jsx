@@ -19,6 +19,7 @@ export default function SidebarLayout() {
     isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
     isBackOfficeAuth && { to: '/Import', label: 'Import', icon: TicketIcon },
     isBackOfficeAuth && { to: '/Dashboard', label: 'Dashboard', icon: TicketIcon },
+    isBackOfficeAuth && { to: '/tickets', label: 'Tickets', icon: TicketIcon }
   ].filter(Boolean);
 
   return (

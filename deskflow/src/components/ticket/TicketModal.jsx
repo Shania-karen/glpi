@@ -15,9 +15,9 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
     setIsSubmitting(true);
     try {
       if (ticket) {
-        await fetchGlpiData(`Assistance/Ticket/${ticket.id}`, { method: 'PATCH', body: { id: ticket.id, ...formData } });
+        await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, { method: 'PATCH', body: { id: ticket.id, ...formData } });
       } else {
-        await fetchGlpiData('Assistance/Ticket', { method: 'POST', body: formData });
+        await fetchGlpiData('/Assistance/Ticket', { method: 'POST', body: formData });
       }
       onSaved();
       onClose();
