@@ -62,16 +62,36 @@ export async function fetchGlpiData(resourcePath, options = {}) {
   }
 }
 
-export async function fetchDataAPIRest(resourcePath, options = {}) {
-  if (!currentAccessToken) {
-    await refreshAccessToken();
+let currentSessionToken = null;
+
+async function initSession() {
+  console.log("Initialisation d'une session GLPI (apirest)...");
+  try {
+    const response = await axios.get(`${API_REST_URL}/initSession`, {
+      headers: {
+        'App-Token': APP_TOKEN,
+        'Authorization': 'Basic ' + btoa('glpi:glpi')
+      }
+    });
+    currentSessionToken = response.data.session_token;
+    return currentSessionToken;
+  } catch (error) {
+    throw new Error("Impossible d'initier la session GLPI : " + error.message);
   }
+}
+
+export async function fetchDataAPIRest(resourcePath, options = {}) {
+  if (!currentSessionToken) {
+    await initSession();
+  }
+
   const axiosConfig = {
     method: options.method || 'GET',
     url: `${API_REST_URL}/${resourcePath}`,
     headers: {
+      'Content-Type': 'application/json',
       'App-Token': APP_TOKEN,
-      'Session-Token': TEMP_SESSION_TOKEN
+      'Session-Token': currentSessionToken
     },
     data: options.body
   };
@@ -81,14 +101,13 @@ export async function fetchDataAPIRest(resourcePath, options = {}) {
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 401) {
-      console.warn("Token expiré, renouvellement en cours...");
-      await refreshAccessToken();
-      
-      axiosConfig.headers['Authorization'] = `Bearer ${currentAccessToken}`;
+      console.warn("Session expirée, réinitialisation...");
+      await initSession();
+      axiosConfig.headers['Session-Token'] = currentSessionToken;
       const retryResponse = await axios(axiosConfig);
       return retryResponse.data;
     }
-    
+
     const errorText = error.response?.data ? JSON.stringify(error.response.data) : error.message;
     throw new Error(`Erreur API GLPI (Statut ${error.response?.status}) : ${errorText}`);
   }

@@ -7,6 +7,9 @@ import BackOffice from './components/backoffice/BackOffice';
 import ResetForm from './components/ticket/ResetForm';
 import Dashboard from './components/backoffice/Dashboard';
 
+import AssetList from './pages/frontoffice/AssetList';
+import TicketCreate from './pages/frontoffice/TicketCreate';
+
 function App() {
   return (
     <BrowserRouter>
@@ -14,6 +17,8 @@ function App() {
         <Route element={<SidebarLayout />}>
           <Route index element={<Accueil />} />
           <Route path="tickets" element={<TicketList />} />
+          <Route path="tickets/new" element={<TicketCreate />} />
+          <Route path="mes-elements" element={<AssetList />} />
           <Route path="exemple" element={<ExempleUI />} />
           <Route path="backoffice" element={<BackOffice />} />
           <Route path="reset" element={<ResetForm />} />

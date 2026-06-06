@@ -1,5 +1,5 @@
 import TicketForm from './TicketForm';
-import { fetchGlpiData } from '../../services/apiClient';
+import { fetchGlpiData, fetchDataAPIRest } from '../../services/apiClient';
 import { initialFormData } from '../../utils/TicketHelper';
 import { useState } from 'react';
 import { Modal, Button } from '../templates';
@@ -14,10 +14,57 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      const { items_ids, ...ticketData } = formData;
+      let currentTicketId = ticket?.id;
       if (ticket) {
-        await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, { method: 'PATCH', body: { id: ticket.id, ...formData } });
+        await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, { 
+          method: 'PATCH', 
+          body: ticketData });
       } else {
-        await fetchGlpiData('/Assistance/Ticket', { method: 'POST', body: formData });
+        const response = await fetchGlpiData('/Assistance/Ticket', { 
+          method: 'POST', 
+          body: ticketData });
+        currentTicketId = response.id;
+      }
+
+      if (items_ids && items_ids.length > 0) {
+        const liaisonsPayload = items_ids.map(item => {
+          const parsed = JSON.parse(item);
+          return {
+            tickets_id: currentTicketId,
+            itemtype: parsed.itemtype,
+            items_id: parsed.id
+          };
+        });
+
+        await fetchDataAPIRest('Item_Ticket', {
+          method: 'POST',
+          body: { input: liaisonsPayload }
+        });
+      }
+
+      // Synchronisation manuelle des acteurs (Demandeur, Assigné, Observateur) lors d'une modification
+      if (ticket) {
+        const syncActor = async (tId, uId, type) => {
+          const existingLinks = await fetchDataAPIRest(`Ticket/${tId}/Ticket_User`).catch(()=>[]);
+          const oldLink = existingLinks.find(l => l.type === type);
+          
+          if (oldLink) {
+            if (uId && String(oldLink.users_id) === String(uId)) return; // Pas de changement
+            await fetchDataAPIRest(`Ticket_User/${oldLink.id}`, { method: 'DELETE' });
+          }
+          
+          if (uId) {
+            await fetchDataAPIRest('Ticket_User', {
+              method: 'POST',
+              body: { input: { tickets_id: tId, users_id: parseInt(uId), type: type } }
+            });
+          }
+        };
+
+        if (ticketData._users_id_assign !== undefined) await syncActor(currentTicketId, ticketData._users_id_assign, 2);
+        if (ticketData._users_id_requester !== undefined) await syncActor(currentTicketId, ticketData._users_id_requester, 1);
+        if (ticketData._users_id_observer !== undefined) await syncActor(currentTicketId, ticketData._users_id_observer, 3);
       }
       onSaved();
       onClose();
@@ -35,7 +82,7 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
       className="max-w-2xl"
     >
       <form onSubmit={handleSubmit}>
-        <Modal.Body>
+        <Modal.Body className="max-h-[70vh] overflow-y-auto">
           <TicketForm formData={formData} onChange={handleChange} users={users} assets={assets} />
         </Modal.Body>
         <Modal.Footer>

@@ -3,9 +3,9 @@ import { useTickets } from '../../hooks/useTicket';
 import { useUsers } from '../../hooks/useUser';
 import { exportTicketsToCSV } from '../../utils/csvHelper';
 import { parseCSVToTickets, processTicketImport } from '../../utils/importHelper';
+import { fetchDataAPIRest } from '../../services/apiClient';
 import TicketModal from './TicketModal';
-import TicketDetailModal from './TicketDetailModal';
-import ResetForm from './ResetForm';
+import TicketDetailView from './TicketDetailView';
 import { useAssets } from '../../hooks/useAssets';
 import { TicketIcon , ExportIcon,ImportIcon } from '../templates';
 import {
@@ -24,6 +24,25 @@ export default function TicketList() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
 
+  const handleApproveSolution = async (solutionId, isApproved) => {
+  try {
+    const targetStatus = isApproved ? 2 : 3; 
+    await fetchDataAPIRest(`/ITILSolution/${solutionId}`, {
+      method: 'PATCH',
+      body: { 
+        input: { 
+          id: solutionId, 
+          status: targetStatus 
+        } 
+      }
+    });
+    
+    alert(isApproved ? "Solution approuvée (Ticket Clos)" : "Solution refusée (Retour En Cours)");
+    loadTickets(); 
+  } catch (err) {
+    alert("Erreur lors de l'approbation : " + err.message);
+  }
+};
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -64,6 +83,21 @@ export default function TicketList() {
   const openModalForDetails = (ticket) => {
     setCurrentTicket(ticket);
     setIsDetailModalOpen(true);
+  };
+
+  const getTypeTicketText = (type) => {
+    if (type === 1) {
+      return "Incident";
+    } else if (type === 2) {
+      return "Demande";
+    }
+    return type || '-';
+  };
+
+  const getTypeTicketVariant = (type) => {
+    if (type === 1) return "warning";
+    if (type === 2) return "info";
+    return "default";
   };
 
   const getStatusVariant = (status) => {
@@ -129,7 +163,7 @@ export default function TicketList() {
               <Th>Priorite</Th>
               <Th>Demandeur</Th>
               <Th>Technicien</Th>
-              <Th>Categorie</Th>
+              <Th>Type</Th>
               <Th>Actions</Th>
             </Tr>
           </thead>
@@ -152,7 +186,7 @@ export default function TicketList() {
                   <Td>
                     {ticket.team?.find(t => t.role === 'assigned')?.name || 'Non assigne'}
                   </Td>
-                  <Td>{ticket.category?.name || 'Sans categorie'}</Td>
+                  <Td><Badge variant={getTypeTicketVariant(ticket.type)}>{getTypeTicketText(ticket.type)}</Badge></Td>
                   <Td>
                     <div className="flex gap-2">
                       <Button size="sm" variant="success" onClick={() => openModalForDetails(ticket)}>
@@ -161,6 +195,24 @@ export default function TicketList() {
                       <Button size="sm" variant="outline" onClick={() => openModalForEdit(ticket)}>
                         Modifier
                       </Button>
+                    {(ticket.status === 5 || String(ticket.status?.name || ticket.status).toLowerCase().includes('resolu')) && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="dark" 
+                          onClick={() => handleApproveSolution(ticket.solution_id, true)}
+                        >
+                          Approuver
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="warning" 
+                          onClick={() => handleApproveSolution(ticket.solution_id, false)}
+                        >
+                          Refuser
+                        </Button>
+                      </>
+                    )}
                       <Button size="sm" variant="danger" onClick={() => console.log('Supprimer', ticket.id)}>
                         Supprimer
                       </Button>
@@ -191,9 +243,8 @@ export default function TicketList() {
       )}
 
       {isDetailModalOpen && (
-        <TicketDetailModal
-          ticket={currentTicket}
-          users={users}
+        <TicketDetailView
+          ticketId={currentTicket.id}
           onClose={() => setIsDetailModalOpen(false)}
           onSaved={loadTickets}
         />

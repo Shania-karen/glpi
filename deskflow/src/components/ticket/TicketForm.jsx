@@ -146,12 +146,29 @@ export default function TicketForm({ formData, onChange, users, assets }) {
       {/* Elements */}
       <div>
         <H3 className="mb-4">Elements</H3>
-        <FormGroup label="Element associe">
-          <Select name="items_id" value={formData.items_id} onChange={onChange}>
-            <option value="">-----</option>
-            {assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </Select>
-        </FormGroup>
+        <FormGroup label="Sélectionner plusieurs éléments">
+        <select 
+          multiple 
+          name="items_ids" 
+          value={formData.items_ids || []} 
+          onChange={(e) => {
+            const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+            onChange({ target: { name: 'items_ids', value: selectedOptions } });
+          }}
+          className="w-full border rounded p-2"
+          size="4"
+        >
+          {assets.map((a, idx) => {
+            const itemId = a.id || a.items_id;
+            const itemType = a._itemtype || a.itemtype || 'Computer';
+            return (
+              <option key={`${itemType}-${itemId || idx}`} value={JSON.stringify({ id: itemId, itemtype: itemType })}>
+                {a.name} ({itemType})
+              </option>
+            );
+          })}
+        </select>
+      </FormGroup>
       </div>
 
     </div>

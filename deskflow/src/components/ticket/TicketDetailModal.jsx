@@ -4,6 +4,7 @@ import { Modal, Button, H3, P, Badge, Textarea, Select, FormGroup, Spinner, Divi
 
 export default function TicketDetailModal({ ticket, users, onClose, onSaved }) {
   const [followups, setFollowups] = useState([]);
+  const [solutionId, setSolutionId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -14,18 +15,39 @@ export default function TicketDetailModal({ ticket, users, onClose, onSaved }) {
   );
 
   useEffect(() => {
-    const loadFollowups = async () => {
+    const loadTicketData = async () => {
       try {
         const data = await fetchGlpiData(`/Assistance/Ticket/${ticket.id}/Timeline/Followup`);
         setFollowups(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Erreur lors de la récupération des suivis :", err);
-      } finally {
-        setLoading(false);
       }
+
+      // Récupérer la solution du ticket (si elle existe)
+      try {
+        const solutions = await fetchGlpiData(`/Assistance/Ticket/${ticket.id}/Timeline/Solution`);
+        console.log('DEBUG Timeline/Solution response:', solutions);
+        if (Array.isArray(solutions) && solutions.length > 0) {
+          setSolutionId(solutions[solutions.length - 1].id);
+        }
+      } catch (err) {
+        console.warn("Timeline/Solution échoué, tentative via ITILSolution...", err.message);
+        // Essayer via l'ancienne API REST
+        try {
+          const solutions = await fetchDataAPIRest(`Ticket/${ticket.id}/ITILSolution`);
+          console.log('DEBUG ITILSolution response:', solutions);
+          if (Array.isArray(solutions) && solutions.length > 0) {
+            setSolutionId(solutions[solutions.length - 1].id);
+          }
+        } catch (err2) {
+          console.warn("ITILSolution échoué aussi:", err2.message);
+        }
+      }
+
+      setLoading(false);
     };
     if (ticket) {
-      loadFollowups();
+      loadTicketData();
     }
   }, [ticket]);
 
@@ -45,24 +67,43 @@ export default function TicketDetailModal({ ticket, users, onClose, onSaved }) {
         });
       }
 
-      const ticketUpdatePayload = { id: ticket.id };
-      let hasChanges = false;
-
       if (newStatus !== ticket.status && newStatus !== ticket.status?.name) {
-        ticketUpdatePayload.status = newStatus;
-        hasChanges = true;
+        await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, {
+          method: 'PATCH',
+          body: { id: ticket.id, status: newStatus }
+        });
       }
 
       const currentAssignee = ticket.team?.find(t => t.role === 'assigned')?.users_id;
       if (newAssignee && String(newAssignee) !== String(currentAssignee)) {
-        ticketUpdatePayload._users_id_assign = parseInt(newAssignee);
-        hasChanges = true;
-      }
-
-      if (hasChanges) {
-        await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, {
-          method: 'PATCH',
-          body: ticketUpdatePayload
+        // Si un technicien est déjà assigné, supprimer l'ancienne liaison
+        if (currentAssignee) {
+          try {
+            const existingLinks = await fetchDataAPIRest(
+              `Ticket/${ticket.id}/Ticket_User`
+            );
+            const oldLink = Array.isArray(existingLinks) 
+              ? existingLinks.find(l => l.users_id == currentAssignee && l.type == 2)
+              : null;
+            if (oldLink) {
+              await fetchDataAPIRest(`Ticket_User/${oldLink.id}`, {
+                method: 'DELETE'
+              });
+            }
+          } catch (e) {
+            console.warn("Impossible de supprimer l'ancien assigné :", e.message);
+          }
+        }
+        // Ajouter le nouveau technicien
+        await fetchDataAPIRest('Ticket_User', {
+          method: 'POST',
+          body: {
+            input: {
+              tickets_id: ticket.id,
+              users_id: parseInt(newAssignee),
+              type: 2 
+            }
+          }
         });
       }
 
@@ -75,6 +116,36 @@ export default function TicketDetailModal({ ticket, users, onClose, onSaved }) {
     }
   };
 
+  const handleApproveSolution = async (isApproved) => {
+    try {
+      if (solutionId) {
+        // Solution formelle : approuver/refuser via ITILSolution
+        const targetStatus = isApproved ? 2 : 3;
+        await fetchDataAPIRest(`ITILSolution/${solutionId}`, {
+          method: 'PUT',
+          body: {
+            input: {
+              id: solutionId,
+              status: targetStatus
+            }
+          }
+        });
+      } else {
+        // Pas de solution formelle : changer le statut du ticket directement
+        const newTicketStatus = isApproved ? 6 : 2; // 6=Clos, 2=En cours
+        await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, {
+          method: 'PATCH',
+          body: { id: ticket.id, status: newTicketStatus }
+        });
+      }
+      alert(isApproved ? 'Solution approuvée (Ticket Clos)' : 'Solution refusée (Retour En Cours)');
+      onSaved();
+      onClose();
+    } catch (err) {
+      alert("Erreur lors de l'approbation : " + err.message);
+    }
+  };
+
   const getStatusVariant = (status) => {
     const s = String(status || '').toLowerCase();
     if (s.includes('resolu') || s.includes('résolu')) return 'success';
@@ -82,6 +153,16 @@ export default function TicketDetailModal({ ticket, users, onClose, onSaved }) {
     if (s.includes('clos')) return 'dark';
     return 'default';
   };
+
+  const isResolved = 
+    ticket?.status === 5 || 
+    ticket?.status === '5' || 
+    String(ticket?.status?.name || ticket?.status || '').toLowerCase().includes('résolu') ||
+    String(ticket?.status?.name || ticket?.status || '').toLowerCase().includes('resolu');
+
+  console.log('DEBUG ticket.status:', ticket?.status, typeof ticket?.status);
+  console.log('DEBUG solutionId:', solutionId);
+  console.log('DEBUG isResolved:', isResolved);
 
   if (!ticket) return null;
 
@@ -186,6 +267,16 @@ export default function TicketDetailModal({ ticket, users, onClose, onSaved }) {
           <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
             Fermer
           </Button>
+          {isResolved && (
+            <>
+              <Button type="button" variant="danger" onClick={() => handleApproveSolution(false)}>
+                Refuser la solution
+              </Button>
+              <Button type="button" variant="success" onClick={() => handleApproveSolution(true)}>
+                Approuver la solution
+              </Button>
+            </>
+          )}
           <Button type="submit" variant="success" disabled={isSubmitting}>
             {isSubmitting ? 'Envoi en cours...' : 'Répondre et Sauvegarder'}
           </Button>

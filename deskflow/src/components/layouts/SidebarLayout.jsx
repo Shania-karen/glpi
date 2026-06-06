@@ -11,7 +11,8 @@ export default function SidebarLayout() {
   const navItems = [
     { to: '/', label: 'Accueil', icon: HomeIcon },
     
-    !isBackOfficeAuth && { to: '/tickets', label: 'Tickets', icon: TicketIcon },
+    !isBackOfficeAuth && { to: '/tickets/new', label: 'Nouveau Ticket', icon: TicketIcon },
+    !isBackOfficeAuth && { to: '/mes-elements', label: 'Liste des Éléments', icon: TicketIcon },
     !isBackOfficeAuth && { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
     !isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
     
