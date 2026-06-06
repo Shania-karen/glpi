@@ -1,121 +1,262 @@
-import { act, useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getElements } from '../../services/dashboard';
-import { Card ,H2,P, H3, Button} from '../templates';
 import { fetchGlpiData } from '../../services/apiClient';
 import Detail from './Detail';
+
+const formatNumber = (num) => {
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num;
+};
+
+const MinimalTile = ({ title, count, iconColorClass, svgIcon, onClick }) => (
+<div 
+    onClick={onClick}
+    className="bg-white border border-gray-100 p-5 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+>
+    <div className="flex justify-between items-start">
+        <div className="text-4xl font-light text-gray-800">{formatNumber(count)}</div>
+        <div className={`p-2 rounded-lg ${iconColorClass} transition-colors opacity-80 group-hover:opacity-100`}>
+            {svgIcon}
+        </div>
+    </div>
+    <div className="mt-4 text-sm font-semibold text-gray-500 tracking-wide">{title}</div>
+</div>
+);
+
+const DefaultIcon = (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+);
+
 export default function Dashboard() {
-    const [elements, setElements] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedElement, setSelectedElement] = useState(null);
-    const[ sumAllItems , setSumAllItems] = useState(0);
-    const [ tickets , setTickets] = useState([]);
-    const [ nbTicketIncident , setNbTicketIncident] = useState(0);
-    const [ nbTicketDemande , setNbTicketDemande] = useState(0);
-    const [ nbTicketGeneral , setNbTicketGeneral] = useState(0);
-  
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const data = await getElements();
-                setSumAllItems(data.reduce((acc, element) => acc + element.allItems.length, 0));
-                setElements(data);
+const [elements, setElements] = useState([]);
+const [loading, setLoading] = useState(true);
+const [isModalOpen, setIsModalOpen] = useState(false);
+const [selectedElement, setSelectedElement] = useState(null);
+const [tickets, setTickets] = useState([]);
+
+const [ticketTypeFilter, setTicketTypeFilter] = useState('all'); 
+const [elementCategoryFilter, setElementCategoryFilter] = useState('all');
+
+const getTicketStatusCode = (ticket) => {
+const rawStatus = ticket.status !== undefined ? ticket.status : ticket.statut;
+if (!rawStatus) return null;
+
+let statusToTest = rawStatus;
+if (typeof rawStatus === 'object') {
+    statusToTest = rawStatus.id !== undefined ? rawStatus.id : (rawStatus.name || rawStatus.value);
+}
+
+const statusStr = String(statusToTest).toLowerCase();
+
+if (statusStr === '1' || statusStr.includes('nouveau') || statusStr === 'new') return 1;
+if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) return 2;
+if (statusStr === '3' || statusStr.includes('planifi')) return 3;
+if (statusStr === '4' || statusStr.includes('attente') || statusStr === 'pending') return 4;
+if (statusStr === '5' || statusStr.includes('résolu') || statusStr.includes('resolu') || statusStr === 'solved') return 5;
+if (statusStr === '6' || statusStr.includes('ferm') || statusStr.includes('clos') || statusStr === 'closed') return 6;
+
+return null;
+};
+
+useEffect(() => {
+    const loadData = async () => {
+        try {
+            const [dataElements, dataTickets] = await Promise.all([
+                getElements(),
+                fetchGlpiData('/Assistance/Ticket?expand_dropdowns=true')
+            ]);
             
-            } catch (error) {
-                console.error("Erreur lors de la récupération:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, []); 
-    const openModalForDetails = (element) => {
-        setSelectedElement(element);
-        setIsModalOpen(true);
-    }
-
-    useEffect(()=>{
-        const loadTickets = async()=>{
-            try {
-                const data = await fetchGlpiData('/Assistance/Ticket?expand_dropdowns=true');
-                const activeTickets = data.filter(ticket => ticket.is_deleted !== true);
-                setTickets(activeTickets);
-            } catch (error) {
-                console.error("Erreur lors de la récupération des tickets:", error);
-            }finally{
-                setLoading(false);
-            }
-        };
-        loadTickets();
-    },[]);
-
-    useEffect(()=>{
-        const countTickets = ()=>{
-            const incidentTickets = tickets.filter(ticket => ticket.type === 'Incident' || ticket.type === 1);
-            const demandeTickets = tickets.filter(ticket => ticket.type ===  'Demande' || ticket.type === 2);
-            setNbTicketIncident(incidentTickets.length);
-            setNbTicketDemande(demandeTickets.length);
-            setNbTicketGeneral(tickets.length);
+            setElements(dataElements);
+            
+            const activeTickets = dataTickets.filter(ticket => ticket.is_deleted !== true);
+            setTickets(activeTickets);
+        } catch (error) {
+            console.error("Erreur lors de la récupération des données:", error);
+        } finally {
+            setLoading(false);
         }
-        countTickets();
-    },[tickets]);
+    };
+    loadData();
+}, []);
 
-    if (loading) {
-        return <p>Chargement des données du tableau de bord...</p>;
-    }
+const totalElements = useMemo(() => elements.reduce((acc, el) => acc + (el.allItems?.length || 0), 0), [elements]);
+const totalTickets = tickets.length;
+
+const filteredTickets = useMemo(() => {
+    if (ticketTypeFilter === 'all') return tickets;
+    
+    return tickets.filter(t => {
+    
+        const typeStr = String(t.type).toLowerCase();
+        if (ticketTypeFilter === '1') return typeStr === '1' || typeStr.includes('incident');
+        if (ticketTypeFilter === '2') return typeStr === '2' || typeStr.includes('demande');
+        return true;
+    });
+}, [tickets, ticketTypeFilter]);
+
+const ticketStats = useMemo(() => {
+    const stats = { nouveaux: 0, enAttente: 0, assignes: 0, planifies: 0, resolus: 0, fermes: 0 };      
+    filteredTickets.forEach(ticket => {
+        const rawStatus = ticket.status !== undefined ? ticket.status : ticket.statut;  
+        if (rawStatus === undefined || rawStatus === null) {
+            return; 
+        }
+        let statusToTest = rawStatus;
+        if (typeof rawStatus === 'object') {
+            statusToTest = rawStatus.id !== undefined ? rawStatus.id : (rawStatus.name || rawStatus.value);
+        }
+
+        const statusStr = String(statusToTest).toLowerCase();
+
+        if (statusStr === '1' || statusStr.includes('nouveau') || statusStr === 'new') {
+            stats.nouveaux++;
+        } else if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) {
+            stats.assignes++;
+        } else if (statusStr === '3' || statusStr.includes('planifi')) {
+            stats.planifies++;
+        } else if (statusStr === '4' || statusStr.includes('attente') || statusStr === 'pending') {
+            stats.enAttente++;
+        } else if (statusStr === '5' || statusStr.includes('résolu') || statusStr.includes('resolu') || statusStr === 'solved') {
+            stats.resolus++;
+        } else if (statusStr === '6' || statusStr.includes('ferm') || statusStr.includes('clos') || statusStr === 'closed') {
+            stats.fermes++;
+        } else {
+            console.warn(`⚠️ Statut non reconnu pour le ticket ${ticket.id} :`, rawStatus);
+        }
+    });
+    
+    return stats;
+}, [filteredTickets]);
+const filteredElements = useMemo(() => {
+    if (elementCategoryFilter === 'all') return elements;
+    return elements.filter(e => e.itemName === elementCategoryFilter);
+}, [elements, elementCategoryFilter]);
+
+const openModalForDetails = (element) => {
+    setSelectedElement(element);
+    setIsModalOpen(true);
+};
+
+if (loading) {
     return (
-        <div>
-            <H2>Tableau de bord</H2>
-            <p>Total d'éléments : {sumAllItems}</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
-                {elements.map((element, index) => (
-                <Card key={index} className="flex flex-col h-full">
-                    <Card.Header>{element.name}</Card.Header>
-                    <Card.Body className="flex-grow flex justify-between items-center">
-                        <H3>{element.allItems?.length || 0}</H3>
-                    </Card.Body>
-                    <Card.Footer><Button variant="outline" onClick={() => openModalForDetails(element)}>Detail</Button></Card.Footer>
-                </Card>
-
-
-                ))}
-                {isModalOpen &&(
-                    <Detail
-                    element={selectedElement} 
-                    onClose={()=> setIsModalOpen(false)}/>
-                )}
-            </div>
-            <P><H2>Nombre de Tickets general </H2></P> 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
-      
-                <Card className="flex flex-col h-full">
-                    <Card.Header>Incidents</Card.Header>
-                    <Card.Body className="flex-grow flex justify-between items-center">
-                        <H3>{nbTicketIncident}</H3>
-                    </Card.Body>
-                    <Card.Footer>
-                        <Button variant="outline" onClick={() => openModalForDetails({ name: 'Incidents', allItems: tickets.filter(t => t.type === 'Incident' || t.type === 1) })}>
-                            Detail
-                        </Button>
-                    </Card.Footer>
-                </Card>
-
-                <Card className="flex flex-col h-full">
-                    <Card.Header>Demandes</Card.Header>
-                    <Card.Body className="flex-grow flex justify-between items-center">
-                        <H3>{nbTicketDemande}</H3>
-                    </Card.Body>
-                    <Card.Footer>
-                        <Button variant="outline" onClick={() => openModalForDetails({ name: 'Demandes', allItems: tickets.filter(t => t.type === 'Demande' || t.type === 2) })}>
-                            Detail
-                        </Button>
-                    </Card.Footer>
-                </Card>
-
-            </div>
-            
+        <div className="flex h-screen items-center justify-center bg-gray-50">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
     );
+}
+
+return (
+    <div className="p-6 md:p-10 bg-[#F8FAFC] min-h-screen font-sans text-gray-800">
+        <div className="mb-10 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900">Vue d'ensemble</h1>
+                <p className="text-gray-500 mt-1">Gérez votre centre d'assistance et votre parc informatique</p>
+            </div>
+            
+            <div className="flex gap-4">
+                <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
+                    <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Tickets</span>
+                    <span className="text-2xl font-bold text-blue-600">{formatNumber(totalTickets)}</span>
+                </div>
+                <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
+                    <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Éléments</span>
+                    <span className="text-2xl font-bold text-emerald-600">{formatNumber(totalElements)}</span>
+                </div>
+            </div>
+        </div>
+
+        <section className="mb-12">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Statut des Tickets</h2>
+                <select 
+                    value={ticketTypeFilter}
+                    onChange={(e) => setTicketTypeFilter(e.target.value)}
+                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 shadow-sm outline-none"
+                >
+                    <option value="all">Tous les types</option>
+                    <option value="1">Incidents uniquement</option>
+                    <option value="2">Demandes uniquement</option>
+                </select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <MinimalTile 
+                    title="Nouveaux" count={ticketStats.nouveaux} 
+                    iconColorClass="bg-green-100 text-green-600" svgIcon={DefaultIcon}
+                    onClick={() => openModalForDetails({ name: 'Tickets entrants', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 1) })} 
+                />
+                <MinimalTile 
+                    title="En attente" count={ticketStats.enAttente} 
+                    iconColorClass="bg-orange-100 text-orange-600" svgIcon={DefaultIcon}
+                    onClick={() => openModalForDetails({ name: 'Tickets en attente', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 4) })} 
+                />
+                <MinimalTile 
+                    title="Assignés" count={ticketStats.assignes} 
+                    iconColorClass="bg-blue-100 text-blue-600" svgIcon={DefaultIcon}
+                    onClick={() => openModalForDetails({ name: 'Tickets assignés', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 2) })} 
+                />
+                <MinimalTile 
+                    title="Planifiés" count={ticketStats.planifies} 
+                    iconColorClass="bg-indigo-100 text-indigo-600" svgIcon={DefaultIcon}
+                    onClick={() => openModalForDetails({ name: 'Tickets planifiés', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 3) })} 
+                />
+                <MinimalTile 
+                    title="Résolus" count={ticketStats.resolus} 
+                    iconColorClass="bg-teal-100 text-teal-600" svgIcon={DefaultIcon}
+                    onClick={() => openModalForDetails({ name: 'Tickets résolus', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 5) })} 
+                />
+                <MinimalTile 
+                    title="Fermés" count={ticketStats.fermes} 
+                    iconColorClass="bg-gray-100 text-gray-500" svgIcon={DefaultIcon}
+                    onClick={() => openModalForDetails({ name: 'Tickets fermés', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 6) })} 
+                />
+            </div>
+        </section>
+
+        <section>
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Parc Informatique</h2>
+                <select 
+                    value={elementCategoryFilter}
+                    onChange={(e) => setElementCategoryFilter(e.target.value)}
+                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 shadow-sm outline-none"
+                >
+                    <option value="all">Toutes les catégories</option>
+                    {elements.map((e, idx) => (
+                        <option key={idx} value={e.itemName}>{e.name || e.itemName}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredElements.map((element, index) => {
+            
+                    const colors = ['bg-blue-50 text-blue-500', 'bg-emerald-50 text-emerald-500', 'bg-purple-50 text-purple-500', 'bg-amber-50 text-amber-500', 'bg-rose-50 text-rose-500'];
+                    const iconColorClass = colors[index % colors.length];
+
+                    return (
+                        <MinimalTile
+                            key={index}
+                            title={element.name || element.itemName}
+                            count={element.allItems?.length || 0}
+                            iconColorClass={iconColorClass}
+                            svgIcon={DefaultIcon}
+                            onClick={() => openModalForDetails(element)}
+                        />
+                    );
+                })}
+                
+                {filteredElements.length === 0 && (
+                    <p className="text-gray-400 col-span-full">Aucun élément trouvé pour cette catégorie.</p>
+                )}
+            </div>
+        </section>
+
+        {isModalOpen && (
+            <Detail
+                element={selectedElement} 
+                onClose={() => setIsModalOpen(false)}
+            />
+        )}
+    </div>
+);
 }

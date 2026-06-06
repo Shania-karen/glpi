@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { TicketIcon, HomeIcon } from '../templates';
+import { TicketIcon, HomeIcon, ResetIcon, DashboardIcon,BackOfficeIcon,ImportIcon ,ElementIcon} from '../templates';
 
 export default function SidebarLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -12,14 +12,14 @@ export default function SidebarLayout() {
     { to: '/', label: 'Accueil', icon: HomeIcon },
     
     !isBackOfficeAuth && { to: '/tickets/new', label: 'Nouveau Ticket', icon: TicketIcon },
-    !isBackOfficeAuth && { to: '/mes-elements', label: 'Liste des Éléments', icon: TicketIcon },
-    !isBackOfficeAuth && { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
+    !isBackOfficeAuth && { to: '/mes-elements', label: 'Liste des Éléments', icon: ElementIcon },
+    //!isBackOfficeAuth && { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
     !isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
     
-    isBackOfficeAuth && { to: '/reset', label: 'Reset', icon: TicketIcon },
-    isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
-    isBackOfficeAuth && { to: '/Import', label: 'Import', icon: TicketIcon },
-    isBackOfficeAuth && { to: '/Dashboard', label: 'Dashboard', icon: TicketIcon },
+    isBackOfficeAuth && { to: '/reset', label: 'Reset', icon: ResetIcon },
+    isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: BackOfficeIcon },
+    isBackOfficeAuth && { to: '/Import', label: 'Import', icon: ImportIcon },
+    isBackOfficeAuth && { to: '/Dashboard', label: 'Dashboard', icon: DashboardIcon},
     isBackOfficeAuth && { to: '/tickets', label: 'Tickets', icon: TicketIcon }
   ].filter(Boolean);
 

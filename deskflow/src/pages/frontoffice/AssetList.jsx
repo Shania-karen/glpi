@@ -24,6 +24,21 @@ export default function AssetList() {
           loadData();
       }, []); 
 
+  const filteredElements = useMemo(() => {
+  return elements.filter((asset) => {
+    const name = (asset.name || '').toLowerCase();
+    const itemType = asset._itemtype || asset.itemtype || 'Computer';
+
+    const matchesSearch =
+      !searchTerm ||
+      name.includes(searchTerm.toLowerCase()) ||
+      String(asset.id || asset.items_id || '').includes(searchTerm);
+
+    const matchesType = !typeFilter || itemType === typeFilter;
+
+    return matchesSearch && matchesType;
+  });
+}, [elements, searchTerm, typeFilter]);    
   const uniqueTypes = useMemo(() => {
     const types = new Set(assets.map(a => a._itemtype || a.itemtype || 'Computer'));
     return Array.from(types).sort();
@@ -69,8 +84,8 @@ export default function AssetList() {
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-200">
-          {elements.length > 0 ? (
-            elements.map((asset, idx) => {
+            {filteredElements.length > 0 ? (
+              filteredElements.map((asset, idx) => {
               const itemId = asset.id || asset.items_id;
               const itemType = asset._itemtype || asset.itemtype || 'Computer';
               return (
