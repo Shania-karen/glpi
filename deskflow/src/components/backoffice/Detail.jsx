@@ -18,20 +18,37 @@ const extractValue = (field) => {
 };
 
 const getModelName = (item) => {
-    return extractValue(item.model) || 
-           extractValue(item.models_id) || 
-           extractValue(item.computermodels_id) || 
-           extractValue(item.monitormodels_id) || '-';
+    if (item.model) {
+        const val = extractValue(item.model);
+        if (val) return val;
+    }
+    if (item.models_id) {
+        const val = extractValue(item.models_id);
+        if (val) return val;
+    }
+    for (const key of Object.keys(item)) {
+        if (key.endsWith('models_id')) {
+            const val = extractValue(item[key]);
+            if (val) return val;
+        }
+    }
+    return '-';
 };
 
 const getTypeName = (item) => {
-    return extractValue(item.type) || 
-           extractValue(item.computertypes_id) || 
-           extractValue(item.monitortypes_id) || 
-           item.itemtype || '-';
+    if (item.type) {
+        const val = extractValue(item.type);
+        if (val) return val;
+    }
+    for (const key of Object.keys(item)) {
+        if (key.endsWith('types_id')) {
+            const val = extractValue(item[key]);
+            if (val) return val;
+        }
+    }
+    return item.itemtype || '-';
 };
 
-// Formateurs dédiés qui acceptent et affichent le chiffre 0 proprement
 const formatDuration = (secondsField) => {
     if (secondsField === null || secondsField === undefined || secondsField === '') return '0m';
     let val = typeof secondsField === 'object' ? (secondsField.value || secondsField.id) : secondsField;

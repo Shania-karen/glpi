@@ -33,6 +33,14 @@ export default function ResetForm({ onResetComplete }) {
         { label: "Certificate", endpoint: "Certificate" },
         { label: "Unmanaged", endpoint: "Unmanaged" },
         { label: "Appliance", endpoint: "Appliance" },
+        { label: "Database", endpoint: "Database" },
+        { label: "Enclosure", endpoint: "Enclosure" },
+        { label: "Rack (Baie)", endpoint: "Rack" },
+        { label: "Passive DC Equipment", endpoint: "PassiveDCEquipment" },
+        { label: "Cartridge Item", endpoint: "CartridgeItem" },
+        { label: "PDU", endpoint: "PDU" },
+        { label: "Cable", endpoint: "Cable" },
+        { label: "Consumable Item", endpoint: "ConsumableItem" },
       ]
     },
     {

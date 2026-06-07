@@ -10,33 +10,107 @@ const GLPI_STATUS_MAP = {
 };
 
 const TICKET_STATUS_MAP = {
-  'New':        1,
-  'Processing': 2,
-  'Pending':    3,
-  'Solved':     5,
-  'Closed':     6,
+  'New':         1,
+  'Nouveau':     1,
+  'In Progress': 2,
+  'Processing':  2,
+  'En cours':    2,
+  'Assigned':    2,
+  'Assigné':     2,
+  'Assigne':     2,
+  'Pending':     4,
+  'En attente':  4,
+  'Planned':     3,
+  'Planifié':    3,
+  'Planifie':    3,
+  'Solved':      5,
+  'Resolved':    5,
+  'Résolu':      5,
+  'Resolu':      5,
+  'Closed':      6,
+  'Clos':        6,
 };
 
 const TICKET_PRIORITY_MAP = {
   'Very Low':  1,
+  'Très basse': 1,
+  'Tres basse': 1,
   'Low':       2,
+  'Basse':     2,
   'Medium':    3,
+  'Moyenne':   3,
   'High':      4,
+  'Haute':     4,
   'Very High': 5,
+  'Très haute': 5,
+  'Tres haute': 5,
+  'Critical':  5,
+  'Critique':  5,
   'Major':     6,
+  'Majeure':   6,
 };
 
 const TICKET_TYPE_MAP = {
   'Incident': 1,
   'Request':  2,
+  'Demande':  2,
 };
 
 const ITEMTYPE_MAP = {
+  // Anglais (Noms des classes GLPI)
   'Computer': 'Computer',
   'Monitor':  'Monitor',
   'Printer':  'Printer',
   'Phone':    'Phone',
   'Software': 'Software',
+  'NetworkEquipment': 'NetworkEquipment',
+  'Peripheral': 'Peripheral',
+  'UninterruptiblePowerSupply': 'UninterruptiblePowerSupply',
+  'Rack': 'Rack',
+  'Database': 'Database',
+  'Chassis': 'Enclosure',
+  'Enclosure': 'Enclosure',
+  'Appliance': 'Appliance',
+  'PassiveDCEquipment': 'PassiveDCEquipment',
+  'CartridgeItem': 'CartridgeItem',
+  'PDU': 'PDU',
+  'Cable': 'Cable',
+  'ConsumableItem': 'ConsumableItem',
+
+  // Français (Traduction depuis le CSV)
+  'Ordinateur': 'Computer',
+  'Moniteur': 'Monitor',
+  'Imprimante': 'Printer',
+  'Téléphone': 'Phone',
+  'Telephone': 'Phone',
+  'Logiciel': 'Software',
+  'Matériel réseau': 'NetworkEquipment',
+  'Materiel reseau': 'NetworkEquipment',
+  'Réseau': 'NetworkEquipment',
+  'Reseau': 'NetworkEquipment',
+  'Périphérique': 'Peripheral',
+  'Peripherique': 'Peripheral',
+  'Onduleur': 'UninterruptiblePowerSupply',
+  'Onduleur / PDU': 'UninterruptiblePowerSupply',
+  'Baie': 'Rack',
+  'Baie (Enclosure)': 'Rack',
+  'Baies (Enclosure)': 'Rack',
+  'Base de données': 'Database',
+  'Base de donnees': 'Database',
+  'Châssis': 'Enclosure',
+  'Chassis (Enclosure)': 'Enclosure',
+  'Dispositif': 'Appliance',
+  'PassiveDCEquipment': 'PassiveDCEquipment',
+  'CartridgeItem': 'CartridgeItem',
+  'PDU': 'PDU',
+  'Cable': 'Cable',
+  'ConsumableItem': 'ConsumableItem',
+  'Câble': 'Cable',
+  'Cartouche': 'CartridgeItem',
+  'Consommable': 'ConsumableItem',
+  'Equipement passif': 'PassiveDCEquipment',
+  'Équip. Passif': 'PassiveDCEquipment',
+  'Equip. Passif': 'PassiveDCEquipment',
 };
 
 const BATCH_SIZE = 10;
@@ -162,44 +236,46 @@ function buildDict(list, nameField = 'name') {
 
 export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFile) {
   const [rawEquip, rawTickets, rawCouts] = await Promise.all([
-    parseCsv(csvEquipements),
-    parseCsv(csvTickets),
-    parseCsv(csvCouts),
+    csvEquipements ? parseCsv(csvEquipements) : Promise.resolve([]),
+    csvTickets ? parseCsv(csvTickets) : Promise.resolve([]),
+    csvCouts ? parseCsv(csvCouts) : Promise.resolve([]),
   ]);
 
-  // Lire le ZIP et indexer par nom d'équipement
-  const zip = await JSZip.loadAsync(zipFile);
+  // Lire le ZIP et indexer par nom d'équipement si fourni
   const images = {}; // { "PC-ADM-001": File }
-  const imgPromises = [];
-  zip.forEach((relativePath, zipEntry) => {
-    if (zipEntry.dir) return;
-    const filename = relativePath.split('/').pop();
-    const ext = filename.split('.').pop().toLowerCase();
-    const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
-    const isJpeg = ext === 'jpg' || ext === 'jpeg';
+  if (zipFile) {
+    const zip = await JSZip.loadAsync(zipFile);
+    const imgPromises = [];
+    zip.forEach((relativePath, zipEntry) => {
+      if (zipEntry.dir) return;
+      const filename = relativePath.split('/').pop();
+      const ext = filename.split('.').pop().toLowerCase();
+      const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+      const isJpeg = ext === 'jpg' || ext === 'jpeg';
 
-    imgPromises.push(
-      zipEntry.async('arraybuffer').then(async (buffer) => {
-        const mimeType = isJpeg ? 'image/jpeg' : 'image/png';
-        const rawBlob = new Blob([buffer], { type: mimeType });
+      imgPromises.push(
+        zipEntry.async('arraybuffer').then(async (buffer) => {
+          const mimeType = isJpeg ? 'image/jpeg' : 'image/png';
+          const rawBlob = new Blob([buffer], { type: mimeType });
 
-        // Convertir PNG/GIF/WebP en JPEG pour garantir un upload fiable
-        if (!isJpeg) {
-          try {
-            const jpegBlob = await convertToJpeg(rawBlob);
-            const jpegFilename = nameWithoutExt.trim() + '.jpeg';
-            images[nameWithoutExt.trim()] = { blob: jpegBlob, filename: jpegFilename };
-          } catch (convErr) {
-            console.warn(`Conversion JPEG échouée pour ${filename}, upload PNG natif:`, convErr);
+          // Convertir PNG/GIF/WebP en JPEG pour garantir un upload fiable
+          if (!isJpeg) {
+            try {
+              const jpegBlob = await convertToJpeg(rawBlob);
+              const jpegFilename = nameWithoutExt.trim() + '.jpeg';
+              images[nameWithoutExt.trim()] = { blob: jpegBlob, filename: jpegFilename };
+            } catch (convErr) {
+              console.warn(`Conversion JPEG échouée pour ${filename}, upload PNG natif:`, convErr);
+              images[nameWithoutExt.trim()] = { blob: rawBlob, filename };
+            }
+          } else {
             images[nameWithoutExt.trim()] = { blob: rawBlob, filename };
           }
-        } else {
-          images[nameWithoutExt.trim()] = { blob: rawBlob, filename };
-        }
-      })
-    );
-  });
-  await Promise.all(imgPromises);
+        })
+      );
+    });
+    await Promise.all(imgPromises);
+  }
 
   // Nettoyage Feuille 1 (Équipements)
   const equipements = rawEquip.map((row, idx) => ({
@@ -261,11 +337,11 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     errors.push(`Doublons de numéros d'inventaire dans la Feuille 1 : ${[...new Set(dupInventory)].join(', ')}`);
   }
 
-  // Doublons sur Name
+  // Doublons sur Name (Avertissement simple, non bloquant)
   const names = equipements.map((e) => e.name).filter(Boolean);
   const dupNames = names.filter((v, i) => names.indexOf(v) !== i);
   if (dupNames.length > 0) {
-    errors.push(`Doublons de noms d'équipement dans la Feuille 1 : ${[...new Set(dupNames)].join(', ')}`);
+    log(`⚠️ Avertissement : Doublons de noms d'équipement dans la Feuille 1 : ${[...new Set(dupNames)].join(', ')}. Les liaisons de tickets associeront la dernière instance importée.`);
   }
 
   // Doublons sur Ref_Ticket
@@ -280,13 +356,9 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   // Validation Feuille 1
   for (const e of equipements) {
     if (!e.name) errors.push(`Feuille 1, ligne ${e._rowNum} : Champ "Name" manquant.`);
-    if (!e.inventoryNumber) errors.push(`Feuille 1, ligne ${e._rowNum} : Champ "Inventory_Number" manquant.`);
     if (!e.itemType) errors.push(`Feuille 1, ligne ${e._rowNum} : Champ "Item_Type" manquant.`);
     if (e.itemType && !ITEMTYPE_MAP[e.itemType]) {
       errors.push(`Feuille 1, ligne ${e._rowNum} : Item_Type "${e.itemType}" non supporté. Valeurs acceptées : ${Object.keys(ITEMTYPE_MAP).join(', ')}.`);
-    }
-    if (e.status && GLPI_STATUS_MAP[e.status] === undefined) {
-      errors.push(`Feuille 1, ligne ${e._rowNum} : Status "${e.status}" invalide. Valeurs acceptées : ${Object.keys(GLPI_STATUS_MAP).join(', ')}.`);
     }
   }
 
@@ -309,7 +381,7 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Colonne "Items" impossible à parser. Vérifiez le format JSON.`);
     } else if (Array.isArray(t.items)) {
       for (const itemName of t.items) {
-        if (!equipNameSet.has(itemName)) {
+        if (equipements.length > 0 && !equipNameSet.has(itemName)) {
           errors.push(`Feuille 2, ligne ${t._rowNum} : L'équipement "${itemName}" (Items) n'existe pas dans la Feuille 1.`);
         }
       }
@@ -320,7 +392,7 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   const refTicketSet = new Set(refTickets);
   for (const c of couts) {
     if (!c.numTicket) errors.push(`Feuille 3, ligne ${c._rowNum} : Champ "Num_Ticket" manquant.`);
-    if (c.numTicket && !refTicketSet.has(c.numTicket)) {
+    if (c.numTicket && tickets.length > 0 && !refTicketSet.has(c.numTicket)) {
       errors.push(`Feuille 3, ligne ${c._rowNum} : Num_Ticket "${c.numTicket}" ne correspond à aucun Ref_Ticket de la Feuille 2.`);
     }
     if (c.durationSeconds < 0) errors.push(`Feuille 3, ligne ${c._rowNum} : Duration_second négatif.`);
@@ -388,6 +460,8 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   const computerTypeDict = buildDict(computerTypes);
   const monitorModelDict = buildDict(monitorModels);
   const monitorTypeDict = buildDict(monitorTypes);
+
+
 
   log('🔍 Vérification correspondances CSV ↔ GLPI (auto-création si manquant)...');
 
@@ -619,6 +693,23 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
   const created = {
     computers: [],   // { id }
     monitors: [],
+    printers: [],
+    phones: [],
+    softwares: [],
+    networks: [],
+    peripherals: [],
+    ups: [],
+    racks: [],
+    databases: [],
+    chassis: [],
+    enclosures: [],
+    appliances: [],
+    passivedcequipments: [],
+    cartridgeitems: [],
+    pdus: [],
+    cables: [],
+    consumableitems: [],
+    equipments: [], // 🟢 Registre générique pour le rollback universel
     tickets: [],     // { id }
     ticketTasks: [], // { id }
     ticketCosts: [], // 🟢 NOUVEAU: Ajout du tracking des TicketCosts
@@ -626,6 +717,87 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
   };
 
   const log = (msg) => onLog && onLog(msg);
+
+  // Caches et helpers pour la création dynamique des types/modèles
+  const typeCache = {};
+  const modelCache = {};
+
+  if (computerTypeDict) {
+    Object.entries(computerTypeDict).forEach(([name, id]) => {
+      typeCache[`Computer_${name.trim().toLowerCase()}`] = id;
+    });
+  }
+  if (monitorTypeDict) {
+    Object.entries(monitorTypeDict).forEach(([name, id]) => {
+      typeCache[`Monitor_${name.trim().toLowerCase()}`] = id;
+    });
+  }
+  if (computerModelDict) {
+    Object.entries(computerModelDict).forEach(([name, id]) => {
+      modelCache[`Computer_${name.trim().toLowerCase()}`] = id;
+    });
+  }
+  if (monitorModelDict) {
+    Object.entries(monitorModelDict).forEach(([name, id]) => {
+      modelCache[`Monitor_${name.trim().toLowerCase()}`] = id;
+    });
+  }
+
+  async function getOrCreateType(itemType, typeName) {
+    if (!typeName) return 0;
+    const cacheKey = `${itemType}_${typeName.toLowerCase().trim()}`;
+    if (typeCache[cacheKey] !== undefined) return typeCache[cacheKey];
+    const glpiTypeClass = `${itemType}Type`;
+    try {
+      const existing = await fetchDataAPIRest(glpiTypeClass).catch(() => []);
+      const found = Array.isArray(existing) ? existing.find(t => t.name.toLowerCase().trim() === typeName.toLowerCase().trim()) : null;
+      if (found) {
+        typeCache[cacheKey] = found.id;
+        return found.id;
+      }
+      const res = await fetchDataAPIRest(glpiTypeClass, {
+        method: 'POST',
+        body: { input: { name: typeName } }
+      });
+      if (res && res.id) {
+        typeCache[cacheKey] = res.id;
+        log(`    ✅ Type "${typeName}" créé pour ${itemType} (id: ${res.id})`);
+        return res.id;
+      }
+    } catch (e) {
+      console.warn(`Could not get/create Type for ${itemType} (using class ${glpiTypeClass}):`, e.message);
+    }
+    typeCache[cacheKey] = 0;
+    return 0;
+  }
+
+  async function getOrCreateModel(itemType, modelName) {
+    if (!modelName) return 0;
+    const cacheKey = `${itemType}_${modelName.toLowerCase().trim()}`;
+    if (modelCache[cacheKey] !== undefined) return modelCache[cacheKey];
+    const glpiModelClass = `${itemType}Model`;
+    try {
+      const existing = await fetchDataAPIRest(glpiModelClass).catch(() => []);
+      const found = Array.isArray(existing) ? existing.find(m => m.name.toLowerCase().trim() === modelName.toLowerCase().trim()) : null;
+      if (found) {
+        modelCache[cacheKey] = found.id;
+        return found.id;
+      }
+      const res = await fetchDataAPIRest(glpiModelClass, {
+        method: 'POST',
+        body: { input: { name: modelName } }
+      });
+      if (res && res.id) {
+        modelCache[cacheKey] = res.id;
+        log(`    ✅ Modèle "${modelName}" créé pour ${itemType} (id: ${res.id})`);
+        return res.id;
+      }
+    } catch (e) {
+      console.warn(`Could not get/create Model for ${itemType} (using class ${glpiModelClass}):`, e.message);
+    }
+    modelCache[cacheKey] = 0;
+    return 0;
+  }
 
   // Helper POST sécurisé : lance une erreur si statut != 2xx
   async function safePost(endpoint, body) {
@@ -637,6 +809,19 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
   }
 
   try {
+    // 🔍 DIAGNOSTIC DES PROFILS GLPI
+    try {
+      const profilesRes = await fetchDataAPIRest('getMyProfiles');
+      const rawProfiles = profilesRes.myprofiles || [];
+      const profiles = Array.isArray(rawProfiles) ? rawProfiles : Object.values(rawProfiles);
+      log(`👤 Profils dispo : ${profiles.map(p => `${p.name} (id:${p.id})`).join(', ')}`);
+      
+      const activeRes = await fetchDataAPIRest('getActiveProfile');
+      log(`🔑 Profil actif : ${activeRes.active_profile?.name || 'Inconnu'} (id: ${activeRes.active_profile?.id})`);
+    } catch (diagErr) {
+      log(`⚠️ Diagnostic Profils échoué : ${diagErr.message}`);
+    }
+
     // ── ÉTAPE 1 : Équipements ──
     log('📦 Import des équipements...');
     const equipNameToGlpi = {}; // "PC-ADM-001" -> { id, itemtype }
@@ -649,8 +834,7 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     }
 
     for (const [itemType, items] of Object.entries(byType)) {
-      const endpoint = itemType; // ex: "Computer", "Monitor"
-      const createdKey = itemType === 'Computer' ? 'computers' : 'monitors';
+      const endpoint = itemType; // ex: "Computer", "Monitor", "NetworkEquipment"
 
       await runInBatches(items, async (e) => {
         const payload = {
@@ -665,16 +849,46 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
           },
         };
 
-        if (itemType === 'Computer') {
-          payload.input.computermodels_id = e.model ? (computerModelDict[e.model.toLowerCase()] ?? 0) : 0;
-          payload.input.computertypes_id = computerTypeDict['computer'] ?? 0;
-        } else if (itemType === 'Monitor') {
-          payload.input.monitormodels_id = e.model ? (monitorModelDict[e.model.toLowerCase()] ?? 0) : 0;
-          payload.input.monitortypes_id = monitorTypeDict['monitor'] ?? 0;
+        const typeFieldName = `${itemType.toLowerCase()}types_id`;
+        const modelFieldName = `${itemType.toLowerCase()}models_id`;
+
+        const typeId = await getOrCreateType(itemType, itemType);
+        const modelId = e.model ? await getOrCreateModel(itemType, e.model) : 0;
+
+        if (typeId > 0) {
+          payload.input[typeFieldName] = typeId;
+        }
+        if (modelId > 0) {
+          payload.input[modelFieldName] = modelId;
         }
 
         const res = await safePost(endpoint, payload);
-        created[createdKey].push({ id: res.id });
+        created.equipments.push({ id: res.id, itemtype: itemType });
+
+        const uiKeyMap = {
+          'Computer': 'computers',
+          'Monitor': 'monitors',
+          'Printer': 'printers',
+          'Phone': 'phones',
+          'Software': 'softwares',
+          'NetworkEquipment': 'networks',
+          'Peripheral': 'peripherals',
+          'UninterruptiblePowerSupply': 'ups',
+          'Rack': 'racks',
+          'Database': 'databases',
+          'Enclosure': 'enclosures',
+          'Appliance': 'appliances',
+          'PassiveDCEquipment': 'passivedcequipments',
+          'CartridgeItem': 'cartridgeitems',
+          'PDU': 'pdus',
+          'Cable': 'cables',
+          'ConsumableItem': 'consumableitems',
+        };
+        const uiKey = uiKeyMap[itemType];
+        if (uiKey && created[uiKey]) {
+          created[uiKey].push({ id: res.id });
+        }
+
         equipNameToGlpi[e.name] = { id: res.id, itemtype: itemType };
       }, (done, total) => {
         log(`  → ${itemType} : ${done}/${total}`);
@@ -685,15 +899,22 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     // ── ÉTAPE 2 : Tickets ──
     log('🎫 Import des tickets...');
     const refToGlpiTicketId = {}; // "1" -> 42 (ID GLPI)
+    const ticketsToUpdateStatus = []; // { id, status }
 
     await runInBatches(tickets, async (t) => {
+      const targetStatus = TICKET_STATUS_MAP[t.status] ?? 1;
+      // Si le statut final est planifié (3), en attente (4), résolu (5) ou clos (6), on le crée temporairement en "En cours" (2)
+      // pour permettre la liaison d'éléments (Item_Ticket) et l'ajout de tâches/coûts
+      const initialStatus = (targetStatus === 3 || targetStatus === 4 || targetStatus === 5 || targetStatus === 6) ? 2 : targetStatus;
+
       const payload = {
         input: {
           name: t.titre,
           content: t.description,
           date: t.dateTime,
+          date_creation: t.dateTime,
           type: TICKET_TYPE_MAP[t.type] ?? 1,
-          status: TICKET_STATUS_MAP[t.status] ?? 1,
+          status: initialStatus,
           priority: TICKET_PRIORITY_MAP[t.priority] ?? 3,
           urgency: TICKET_PRIORITY_MAP[t.priority] ?? 3,
           impact: TICKET_PRIORITY_MAP[t.priority] ?? 3,
@@ -702,6 +923,10 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
       const res = await safePost('Ticket', payload);
       created.tickets.push({ id: res.id });
       refToGlpiTicketId[t.refTicket] = res.id;
+
+      if (targetStatus === 3 || targetStatus === 4 || targetStatus === 5 || targetStatus === 6) {
+        ticketsToUpdateStatus.push({ id: res.id, status: targetStatus, date: t.dateTime });
+      }
     }, (done, total) => {
       log(`  → Tickets : ${done}/${total}`);
       onProgress && onProgress();
@@ -721,16 +946,22 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     }
 
     await runInBatches(ticketItemRelations, async (rel) => {
-      await fetchDataAPIRest('Item_Ticket', {
-        method: 'POST',
-        body: {
-          input: {
-            tickets_id: rel.ticketId,
-            items_id: rel.itemId,
-            itemtype: rel.itemtype,
+      try {
+        await fetchDataAPIRest('Item_Ticket', {
+          method: 'POST',
+          body: {
+            input: [
+              {
+                tickets_id: rel.ticketId,
+                items_id: rel.itemId,
+                itemtype: rel.itemtype,
+              }
+            ]
           },
-        },
-      });
+        });
+      } catch (err) {
+        log(`⚠️ Liaison ignorée (${rel.itemtype} ID ${rel.itemId} ↔ Ticket ID ${rel.ticketId}) : ${err.message}`);
+      }
     }, (done, total) => {
       log(`  → Relations : ${done}/${total}`);
       onProgress && onProgress();
@@ -742,26 +973,34 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
       const ticketGlpiId = refToGlpiTicketId[c.numTicket];
       if (!ticketGlpiId) return;
 
-      // 1. 🟢 CORRECTION : Création SYMÉTRIQUE de la tâche (même à 0s) pour conserver l'alignement des index
-      const taskRes = await safePost('TicketTask', {
-        input: {
-          tickets_id: ticketGlpiId,
-          actiontime: c.durationSeconds, // Insère 0 ou 600 sans distinction
-          content: `Tâche importée - Temps passé: ${c.durationSeconds}s`,
-        },
-      });
-      created.ticketTasks.push({ id: taskRes.id });
+      try {
+        // 1. Création SYMÉTRIQUE de la tâche (même à 0s) pour conserver l'alignement des index
+        const taskRes = await safePost('TicketTask', {
+          input: {
+            tickets_id: ticketGlpiId,
+            actiontime: c.durationSeconds,
+            content: `Tâche importée - Temps passé: ${c.durationSeconds}s`,
+          },
+        });
+        created.ticketTasks.push({ id: taskRes.id });
+      } catch (err) {
+        log(`⚠️ Tâche ignorée pour le ticket ID ${ticketGlpiId} : ${err.message}`);
+      }
 
-      // 2. Création du Coût financier associé sur la même ligne
-      const costRes = await safePost('TicketCost', {
-        input: {
-          tickets_id: ticketGlpiId,
-          cost_fixed: c.fixedCost,
-          cost_time: c.timeCost,
-          name: 'Coûts financiers importés',
-        },
-      });
-      created.ticketCosts.push({ id: costRes.id }); 
+      try {
+        // 2. Création du Coût financier associé sur la même ligne
+        const costRes = await safePost('TicketCost', {
+          input: {
+            tickets_id: ticketGlpiId,
+            cost_fixed: c.fixedCost,
+            cost_time: c.timeCost,
+            name: 'Coûts financiers importés',
+          },
+        });
+        created.ticketCosts.push({ id: costRes.id });
+      } catch (err) {
+        log(`⚠️ Coût ignoré pour le ticket ID ${ticketGlpiId} : ${err.message}`);
+      }
     }, (done, total) => {
       log(`  → Coûts : ${done}/${total}`);
       onProgress && onProgress();
@@ -816,6 +1055,31 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
       onProgress && onProgress();
     });
 
+    // ── ÉTAPE 5 : Finalisation des statuts de tickets résolus/clos ──
+    if (ticketsToUpdateStatus.length > 0) {
+      log('🔄 Finalisation des statuts de tickets (Résolus/Clos)...');
+      await runInBatches(ticketsToUpdateStatus, async (item) => {
+        try {
+          await fetchDataAPIRest(`Ticket/${item.id}`, {
+            method: 'PUT',
+            body: {
+              input: { 
+                id: item.id, 
+                status: item.status,
+                date: item.date,
+                date_creation: item.date
+              }
+            }
+          });
+        } catch (err) {
+          log(`  ⚠️ Impossible de mettre à jour le statut du ticket ID ${item.id} à ${item.status} : ${err.message}`);
+        }
+      }, (done, total) => {
+        log(`  → Finalisation tickets : ${done}/${total}`);
+        onProgress && onProgress();
+      });
+    }
+
     log('✅ Import terminé avec succès !');
     return { success: true, created };
 
@@ -826,10 +1090,6 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     throw error;
   }
 }
-
-// ─────────────────────────────────────────────
-// PHASE 4 : ROLLBACK AGRESSIF
-// ─────────────────────────────────────────────
 
 export async function phase4_rollback(created, onLog) {
   const log = (msg) => onLog && onLog(msg);
@@ -861,14 +1121,19 @@ export async function phase4_rollback(created, onLog) {
       for (const { id } of created.tickets) await deleteItem('Ticket', id);
   }
 
-  log('🗑️ Suppression des moniteurs créés...');
-  if (created.monitors) {
-      for (const { id } of created.monitors) await deleteItem('Monitor', id);
-  }
-
-  log('🗑️ Suppression des ordinateurs créés...');
-  if (created.computers) {
-      for (const { id } of created.computers) await deleteItem('Computer', id);
+  log('🗑️ Suppression des équipements créés...');
+  if (created.equipments && created.equipments.length > 0) {
+    for (const { id, itemtype } of created.equipments) {
+      await deleteItem(itemtype, id);
+    }
+  } else {
+    // Fallback historique si l'ancien format est fourni
+    if (created.monitors) {
+        for (const { id } of created.monitors) await deleteItem('Monitor', id);
+    }
+    if (created.computers) {
+        for (const { id } of created.computers) await deleteItem('Computer', id);
+    }
   }
 
   log('✅ Rollback terminé. Base de données restaurée.');

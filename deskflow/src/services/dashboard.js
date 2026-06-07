@@ -12,9 +12,21 @@ export async function getElements() {
             }
         };
 
-        const safeFetchRest = async (resource) => {
+        const fetchAllRest = async (resource) => {
+            const limit = 500;
+            let start = 0;
+            let all = [];
+            const separator = resource.includes('?') ? '&' : '?';
             try {
-                return await fetchDataAPIRest(resource);
+                while (true) {
+                    const url = `${resource}${separator}range=${start}-${start + limit - 1}`;
+                    const data = await fetchDataAPIRest(url);
+                    if (!data || !Array.isArray(data) || data.length === 0) break;
+                    all = all.concat(data);
+                    if (data.length < limit) break;
+                    start += limit;
+                }
+                return all;
             } catch (err) {
                 console.warn(`warning fetching REST ${resource}:`, err);
                 return [];
@@ -23,8 +35,8 @@ export async function getElements() {
 
         const [resAssets, docs, docLinks] = await Promise.all([
             safeFetch('/Assets'),
-            safeFetchRest('Document?range=0-1000'),
-            safeFetchRest('Document_Item?range=0-1000')
+            fetchAllRest('Document'),
+            fetchAllRest('Document_Item')
         ]);
 
         // --- DIAGNOSTIC ---
@@ -51,10 +63,37 @@ export async function getElements() {
 
         console.log("DASHBOARD: docsMap keys:", Object.keys(docsMap));
 
-        const assets = resAssets || [];
+        const standardAssets = [
+            { itemtype: 'Computer', name: 'Ordinateurs' },
+            { itemtype: 'Monitor', name: 'Moniteurs' },
+            { itemtype: 'NetworkEquipment', name: 'Matériels réseau' },
+            { itemtype: 'Peripheral', name: 'Périphériques' },
+            { itemtype: 'Phone', name: 'Téléphones' },
+            { itemtype: 'Printer', name: 'Imprimantes' },
+            { itemtype: 'Software', name: 'Logiciels' },
+            { itemtype: 'SoftwareLicense', name: 'Licences' },
+            { itemtype: 'Certificate', name: 'Certificats' },
+            { itemtype: 'Unmanaged', name: 'Équipements non gérés' },
+            { itemtype: 'Appliance', name: 'Dispositifs' },
+            { itemtype: 'Database', name: 'Bases de données' },
+            { itemtype: 'Enclosure', name: 'Châssis (Enclosures)' },
+            { itemtype: 'Rack', name: 'Baies' },
+            { itemtype: 'PassiveDCEquipment', name: 'Equip. Passif (DC)' },
+            { itemtype: 'CartridgeItem', name: 'Cartouches' },
+            { itemtype: 'PDU', name: 'PDUs' },
+            { itemtype: 'Cable', name: 'Câbles' },
+            { itemtype: 'ConsumableItem', name: 'Consommables' }
+        ];
+
+        const assets = resAssets && resAssets.length > 0 ? resAssets : [];
+        standardAssets.forEach(std => {
+            if (!assets.some(a => a.itemtype === std.itemtype)) {
+                assets.push(std);
+            }
+        });
+
         const assetsTable = await Promise.all(assets.map(async asset => {
-            const rawItems = await safeFetchRest(`${asset.itemtype}?expand_dropdowns=true`) || [];
-            const items = Array.isArray(rawItems) ? rawItems : [];
+            const items = await fetchAllRest(`${asset.itemtype}?expand_dropdowns=true`) || [];
             const mappedItems = items.map(item => {
                 const key = `${asset.itemtype}_${item.id}`;
                 return {

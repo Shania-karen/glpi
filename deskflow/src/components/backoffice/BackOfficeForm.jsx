@@ -44,6 +44,7 @@ export default function BackOfficeForm({ onClose }) {
                 <input 
                   type="password" 
                   name="value" 
+                  value={formData.value}
                   className="w-full border border-gray-300 rounded p-2"
                   onChange={handleChange} 
                   placeholder="Entrez le mot de passe"

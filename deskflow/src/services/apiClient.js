@@ -74,6 +74,39 @@ async function initSession() {
       }
     });
     currentSessionToken = response.data.session_token;
+
+    // Basculer vers le profil super-admin ou admin pour garantir les droits d'écriture complets
+    try {
+      const profilesRes = await axios.get(`${API_REST_URL}/getMyProfiles`, {
+        headers: {
+          'App-Token': APP_TOKEN,
+          'Session-Token': currentSessionToken
+        }
+      });
+      const rawProfiles = profilesRes.data.myprofiles || [];
+      const profiles = Array.isArray(rawProfiles) ? rawProfiles : Object.values(rawProfiles);
+      const adminProfile = profiles.find(p => 
+        String(p.id) === '4' || 
+        (p.name && p.name.toLowerCase().includes('admin')) || 
+        (p.name && p.name.toLowerCase().includes('super'))
+      );
+
+      if (adminProfile) {
+        console.log(`Bascule vers le profil privilégié : ${adminProfile.name} (id: ${adminProfile.id})`);
+        await axios.post(`${API_REST_URL}/changeActiveProfile`, {
+          profiles_id: adminProfile.id
+        }, {
+          headers: {
+            'App-Token': APP_TOKEN,
+            'Session-Token': currentSessionToken,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (profileErr) {
+      console.warn("Attention : Impossible de forcer le profil super-admin :", profileErr.message);
+    }
+
     return currentSessionToken;
   } catch (error) {
     throw new Error("Impossible d'initier la session GLPI : " + error.message);

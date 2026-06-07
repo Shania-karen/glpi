@@ -1,6 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchDataAPIRest, fetchGlpiData } from '../../services/apiClient';
 import { Button, Spinner, Badge } from '../templates';
+
+const extractValue = (field) => {
+    if (field === null || field === undefined || field === '' || field === 0 || field === '0') return null;
+    if (Array.isArray(field)) {
+        if (field.length === 0) return null;
+        return field.map(f => f.completename || f.name || f.value || f.id).join(', ') || null;
+    }
+    if (typeof field === 'object') {
+        return field.completename || field.name || field.value || field.id || null;
+    }
+    return String(field);
+};
+
+const getModelName = (detail) => {
+    if (!detail) return '-';
+    if (detail.model) {
+        const val = extractValue(detail.model);
+        if (val) return val;
+    }
+    if (detail.models_id) {
+        const val = extractValue(detail.models_id);
+        if (val) return val;
+    }
+    for (const key of Object.keys(detail)) {
+        if (key.endsWith('models_id')) {
+            const val = extractValue(detail[key]);
+            if (val) return val;
+        }
+    }
+    return '-';
+};
+
+const getTypeName = (detail) => {
+    if (!detail) return '-';
+    if (detail.type) {
+        const val = extractValue(detail.type);
+        if (val) return val;
+    }
+    for (const key of Object.keys(detail)) {
+        if (key.endsWith('types_id')) {
+            const val = extractValue(detail[key]);
+            if (val) return val;
+        }
+    }
+    return detail.itemtype || '-';
+};
+
 export default function TicketDetailView({ ticketId, onClose, onSaved }) {
   const [ticketData, setTicketData] = useState(null);
   const [timelineEvents, setTimelineEvents] = useState([]);
@@ -29,7 +76,7 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           const itemDetails = await Promise.all(
             items.map(async (item) => {
               try {
-                const detail = await fetchDataAPIRest(`${item.itemtype}/${item.items_id}`);
+                const detail = await fetchDataAPIRest(`${item.itemtype}/${item.items_id}?expand_dropdowns=true`);
                 return { ...item, name: detail.name || `${item.itemtype} #${item.items_id}`, detail };
               } catch {
                 return { ...item, name: `${item.itemtype} #${item.items_id}`, detail: null };
@@ -315,6 +362,12 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
                     <div>
                       <p className="font-semibold">{item.name}</p>
                       <p className="text-xs text-gray-500">{item.itemtype} — ID: {item.items_id}</p>
+                      {item.detail && (
+                        <div className="mt-2 text-xs text-gray-400 flex gap-4">
+                          <span><strong>Type:</strong> {getTypeName(item.detail)}</span>
+                          <span><strong>Modèle:</strong> {getModelName(item.detail)}</span>
+                        </div>
+                      )}
                     </div>
                     <Badge variant="dark">{item.itemtype}</Badge>
                   </div>

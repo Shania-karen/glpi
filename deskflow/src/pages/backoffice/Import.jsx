@@ -101,7 +101,7 @@ export default function Import() {
     setFiles((prev) => ({ ...prev, [key]: e.dataTransfer.files?.[0] || null }));
   };
 
-  const allFilesLoaded = files.csv1 && files.csv2 && files.csv3 && files.zip;
+  const hasAtLeastOneFile = files.csv1 || files.csv2 || files.csv3 || files.zip;
   const isRunning = ['PARSING', 'DRY_RUN', 'IMPORTING'].includes(phase);
 
   const handleLaunchImport = async () => {
@@ -216,7 +216,7 @@ export default function Import() {
               <div className="flex gap-2 flex-wrap w-full">
                 <Button
                   variant="primary"
-                  disabled={!allFilesLoaded || isRunning}
+                  disabled={!hasAtLeastOneFile || isRunning}
                   onClick={handleLaunchImport}
                 >
                   {isRunning ? (
@@ -295,11 +295,27 @@ export default function Import() {
               </Card.Header>
               <Card.Body>
                 <div className="grid grid-cols-3 gap-3">
-                  <SummaryItem label="Ordinateurs"  count={importResult.computers.length} />
-                  <SummaryItem label="Moniteurs"    count={importResult.monitors.length} />
-                  <SummaryItem label="Tickets"      count={importResult.tickets.length} />
-                  <SummaryItem label="Tâches"       count={importResult.ticketTasks.length} />
-                  <SummaryItem label="Documents"    count={importResult.documents.length} />
+                  <SummaryItem label="Ordinateurs"  count={importResult.computers?.length || 0} />
+                  <SummaryItem label="Moniteurs"    count={importResult.monitors?.length || 0} />
+                  <SummaryItem label="Réseau"       count={importResult.networks?.length || 0} />
+                  <SummaryItem label="Périphériques" count={importResult.peripherals?.length || 0} />
+                  <SummaryItem label="Imprimantes"  count={importResult.printers?.length || 0} />
+                  <SummaryItem label="Téléphones"   count={importResult.phones?.length || 0} />
+                  <SummaryItem label="Onduleurs"    count={importResult.ups?.length || 0} />
+                  <SummaryItem label="Baies"        count={importResult.racks?.length || 0} />
+                  <SummaryItem label="Bases de données" count={importResult.databases?.length || 0} />
+                  <SummaryItem label="Châssis"      count={importResult.chassis?.length || 0} />
+                  <SummaryItem label="Châssis (Enclosures)" count={importResult.enclosures?.length || 0} />
+                  <SummaryItem label="Dispositifs"  count={importResult.appliances?.length || 0} />
+                  <SummaryItem label="Logiciels"    count={importResult.softwares?.length || 0} />
+                  <SummaryItem label="Equip. Passif (DC)" count={importResult.passivedcequipments?.length || 0} />
+                  <SummaryItem label="Cartouches"   count={importResult.cartridgeitems?.length || 0} />
+                  <SummaryItem label="PDUs"         count={importResult.pdus?.length || 0} />
+                  <SummaryItem label="Câbles"       count={importResult.cables?.length || 0} />
+                  <SummaryItem label="Consommables" count={importResult.consumableitems?.length || 0} />
+                  <SummaryItem label="Tickets"      count={importResult.tickets?.length || 0} />
+                  <SummaryItem label="Tâches"       count={importResult.ticketTasks?.length || 0} />
+                  <SummaryItem label="Documents"    count={importResult.documents?.length || 0} />
                 </div>
               </Card.Body>
             </Card>

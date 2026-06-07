@@ -24,6 +24,13 @@ export default function TicketList() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(tickets.length / itemsPerPage) || 1;
+  const activePage = Math.min(currentPage, totalPages);
+  const currentTickets = tickets.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+
   const handleApproveSolution = async (solutionId, isApproved) => {
   try {
     const targetStatus = isApproved ? 2 : 3; 
@@ -153,7 +160,8 @@ export default function TicketList() {
 
       {/* Table */}
       {!loading && !error && (
-        <Table>
+        <>
+          <Table>
           <thead>
             <Tr>
               <Th>ID</Th>
@@ -168,8 +176,8 @@ export default function TicketList() {
             </Tr>
           </thead>
           <tbody>
-            {tickets.length > 0 ? (
-              tickets.map((ticket) => (
+            {currentTickets.length > 0 ? (
+              currentTickets.map((ticket) => (
                 <Tr key={ticket.id}>
                   <Td>{ticket.id}</Td>
                   <Td className="font-medium text-black">{ticket.name || 'Sans titre'}</Td>
@@ -229,6 +237,35 @@ export default function TicketList() {
             )}
           </tbody>
         </Table>
+        
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between mt-4 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+          <div className="text-sm text-neutral-500">
+            Affichage de <strong>{tickets.length > 0 ? (activePage - 1) * itemsPerPage + 1 : 0}</strong> à <strong>{Math.min(activePage * itemsPerPage, tickets.length)}</strong> sur <strong>{tickets.length}</strong> tickets
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={activePage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            >
+              Précédent
+            </Button>
+            <span className="text-sm font-medium text-black px-3 py-1 bg-neutral-100 rounded-md border border-neutral-200">
+              Page {activePage} sur {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={activePage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            >
+              Suivant
+            </Button>
+          </div>
+        </div>
+        </>
       )}
 
       {/* Modals */}

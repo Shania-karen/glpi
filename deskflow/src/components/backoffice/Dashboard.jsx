@@ -49,9 +49,9 @@ const getTicketStatusCode = (ticket) => {
     const statusStr = String(statusToTest).toLowerCase();
 
     if (statusStr === '1' || statusStr.includes('nouveau') || statusStr === 'new') return 1;
-    if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) return 2;
     if (statusStr === '3' || statusStr.includes('planifi')) return 3;
     if (statusStr === '4' || statusStr.includes('attente') || statusStr === 'pending') return 4;
+    if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) return 2;
     if (statusStr === '5' || statusStr.includes('résolu') || statusStr.includes('resolu') || statusStr === 'solved') return 5;
     if (statusStr === '6' || statusStr.includes('ferm') || statusStr.includes('clos') || statusStr === 'closed') return 6;
 
@@ -59,13 +59,34 @@ const getTicketStatusCode = (ticket) => {
 };
 
 useEffect(() => {
+    const fetchAllRest = async (resource) => {
+        const limit = 500;
+        let start = 0;
+        let all = [];
+        const separator = resource.includes('?') ? '&' : '?';
+        try {
+            while (true) {
+                const url = `${resource}${separator}range=${start}-${start + limit - 1}`;
+                const data = await fetchDataAPIRest(url);
+                if (!data || !Array.isArray(data) || data.length === 0) break;
+                all = all.concat(data);
+                if (data.length < limit) break;
+                start += limit;
+            }
+            return all;
+        } catch (err) {
+            console.warn(`warning fetching REST ${resource}:`, err);
+            return [];
+        }
+    };
+
     const loadData = async () => {
         try {
             const [dataElements, dataTickets, dataTasks, dataCosts] = await Promise.all([
                 getElements(),
-                fetchGlpiData('/Assistance/Ticket?expand_dropdowns=true'),
-                fetchDataAPIRest('/TicketTask'),
-                fetchDataAPIRest('/TicketCost')
+                fetchAllRest('Ticket?expand_dropdowns=true'),
+                fetchAllRest('TicketTask'),
+                fetchAllRest('TicketCost')
             ]);
             
             setElements(dataElements);
