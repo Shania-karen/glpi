@@ -85,15 +85,22 @@ export async function fetchDataAPIRest(resourcePath, options = {}) {
     await initSession();
   }
 
+  const headers = {
+    'App-Token': APP_TOKEN,
+    'Session-Token': currentSessionToken,
+    ...options.headers
+  };
+
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const axiosConfig = {
     method: options.method || 'GET',
     url: `${API_REST_URL}/${resourcePath}`,
-    headers: {
-      'Content-Type': 'application/json',
-      'App-Token': APP_TOKEN,
-      'Session-Token': currentSessionToken
-    },
-    data: options.body
+    headers,
+    data: options.body,
+    ...options.axiosConfig
   };
 
   try {

@@ -6,6 +6,7 @@ import TicketList from './components/ticket/TicketList';
 import BackOffice from './components/backoffice/BackOffice';
 import ResetForm from './components/ticket/ResetForm';
 import Dashboard from './components/backoffice/Dashboard';
+import ImportData from './pages/backoffice/Import';
 
 import AssetList from './pages/frontoffice/AssetList';
 import TicketCreate from './pages/frontoffice/TicketCreate';
@@ -23,6 +24,7 @@ function App() {
           <Route path="backoffice" element={<BackOffice />} />
           <Route path="reset" element={<ResetForm />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="backoffice/import" element={<ImportData />} />
         </Route>
       </Routes>
     </BrowserRouter>

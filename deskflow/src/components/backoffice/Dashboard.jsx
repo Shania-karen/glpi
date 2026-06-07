@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { getElements } from '../../services/dashboard';
-import { fetchGlpiData } from '../../services/apiClient';
+import { fetchDataAPIRest, fetchGlpiData } from '../../services/apiClient';
 import Detail from './Detail';
 
 const formatNumber = (num) => {
@@ -38,38 +38,110 @@ const [ticketTypeFilter, setTicketTypeFilter] = useState('all');
 const [elementCategoryFilter, setElementCategoryFilter] = useState('all');
 
 const getTicketStatusCode = (ticket) => {
-const rawStatus = ticket.status !== undefined ? ticket.status : ticket.statut;
-if (!rawStatus) return null;
+    const rawStatus = ticket.status !== undefined ? ticket.status : ticket.statut;
+    if (!rawStatus) return null;
 
-let statusToTest = rawStatus;
-if (typeof rawStatus === 'object') {
-    statusToTest = rawStatus.id !== undefined ? rawStatus.id : (rawStatus.name || rawStatus.value);
-}
+    let statusToTest = rawStatus;
+    if (typeof rawStatus === 'object') {
+        statusToTest = rawStatus.id !== undefined ? rawStatus.id : (rawStatus.name || rawStatus.value);
+    }
 
-const statusStr = String(statusToTest).toLowerCase();
+    const statusStr = String(statusToTest).toLowerCase();
 
-if (statusStr === '1' || statusStr.includes('nouveau') || statusStr === 'new') return 1;
-if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) return 2;
-if (statusStr === '3' || statusStr.includes('planifi')) return 3;
-if (statusStr === '4' || statusStr.includes('attente') || statusStr === 'pending') return 4;
-if (statusStr === '5' || statusStr.includes('résolu') || statusStr.includes('resolu') || statusStr === 'solved') return 5;
-if (statusStr === '6' || statusStr.includes('ferm') || statusStr.includes('clos') || statusStr === 'closed') return 6;
+    if (statusStr === '1' || statusStr.includes('nouveau') || statusStr === 'new') return 1;
+    if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) return 2;
+    if (statusStr === '3' || statusStr.includes('planifi')) return 3;
+    if (statusStr === '4' || statusStr.includes('attente') || statusStr === 'pending') return 4;
+    if (statusStr === '5' || statusStr.includes('résolu') || statusStr.includes('resolu') || statusStr === 'solved') return 5;
+    if (statusStr === '6' || statusStr.includes('ferm') || statusStr.includes('clos') || statusStr === 'closed') return 6;
 
-return null;
+    return null;
 };
 
 useEffect(() => {
     const loadData = async () => {
         try {
-            const [dataElements, dataTickets] = await Promise.all([
+            const [dataElements, dataTickets, dataTasks, dataCosts] = await Promise.all([
                 getElements(),
-                fetchGlpiData('/Assistance/Ticket?expand_dropdowns=true')
+                fetchGlpiData('/Assistance/Ticket?expand_dropdowns=true'),
+                fetchDataAPIRest('/TicketTask'),
+                fetchDataAPIRest('/TicketCost')
             ]);
             
             setElements(dataElements);
             
-            const activeTickets = dataTickets.filter(ticket => ticket.is_deleted !== true);
-            setTickets(activeTickets);
+            const rawTasks = Array.isArray(dataTasks) ? dataTasks : (dataTasks?.data || []);
+            const rawCosts = Array.isArray(dataCosts) ? dataCosts : (dataCosts?.data || []);
+            const rawTickets = Array.isArray(dataTickets) ? dataTickets : (dataTickets?.data || []);
+
+            // 🟢 CORRECTION : Traitement intelligent des tickets uniques
+            const activeTickets = rawTickets
+                .filter(ticket => ticket.is_deleted !== true)
+                .map(ticket => {
+                    const associatedCosts = rawCosts
+                        .filter(cost => String(cost.tickets_id?.id || cost.tickets_id) === String(ticket.id))
+                        .sort((a, b) => a.id - b.id);
+                    
+                    const associatedTasks = rawTasks
+                        .filter(task => String(task.tickets_id?.id || task.tickets_id) === String(ticket.id))
+                        .sort((a, b) => a.id - b.id);
+
+                    const availableTasks = [...associatedTasks];
+                    const unrolledLines = [];
+
+                    if (associatedCosts.length === 0 && availableTasks.length === 0) {
+                        unrolledLines.push({ ...ticket, actiontime: 0, cost_fixed: 0, cost_time: 0 });
+                    } else {
+                        // On parcourt les coûts et on cherche la tâche correspondante (Smart Match)
+                        associatedCosts.forEach(cost => {
+                            const costTimeVal = parseFloat(String(cost.cost_time?.value || cost.cost_time || 0).replace(',', '.'));
+                            const costFixedVal = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.'));
+                            
+                            let matchedTask = null;
+                            
+                            // Si ce coût possède un tarif horaire, il DOIT être lié à la tâche qui a une durée > 0
+                            if (costTimeVal > 0) {
+                                const taskIdx = availableTasks.findIndex(t => parseInt(t.actiontime?.value || t.actiontime || 0, 10) > 0);
+                                if (taskIdx !== -1) matchedTask = availableTasks.splice(taskIdx, 1)[0];
+                            } else {
+                                // Sinon on cherche une tâche à 0 (si GLPI l'a gardée)
+                                const taskIdx = availableTasks.findIndex(t => parseInt(t.actiontime?.value || t.actiontime || 0, 10) === 0);
+                                if (taskIdx !== -1) matchedTask = availableTasks.splice(taskIdx, 1)[0];
+                            }
+
+                            // Si rien ne correspond exactement, on prend la première tâche restante
+                            if (!matchedTask && availableTasks.length > 0) {
+                                matchedTask = availableTasks.shift();
+                            }
+
+                            unrolledLines.push({
+                                ...ticket,
+                                actiontime: matchedTask ? parseInt(matchedTask.actiontime?.value || matchedTask.actiontime || 0, 10) : 0,
+                                cost_fixed: costFixedVal,
+                                cost_time: costTimeVal
+                            });
+                        });
+
+                        // S'il reste des tâches sans coût
+                        availableTasks.forEach(task => {
+                            unrolledLines.push({
+                                ...ticket,
+                                actiontime: parseInt(task.actiontime?.value || task.actiontime || 0, 10),
+                                cost_fixed: 0,
+                                cost_time: 0
+                            });
+                        });
+                    }
+
+                    // On retourne le ticket unique, en lui attachant ses lignes déroulées pour le Modal
+                    return {
+                        ...ticket,
+                        unrolledLines
+                    };
+                });
+
+            setTickets(activeTickets); // tickets contient des tickets UNIQUES
+
         } catch (error) {
             console.error("Erreur lors de la récupération des données:", error);
         } finally {
@@ -80,13 +152,11 @@ useEffect(() => {
 }, []);
 
 const totalElements = useMemo(() => elements.reduce((acc, el) => acc + (el.allItems?.length || 0), 0), [elements]);
-const totalTickets = tickets.length;
+const totalTickets = tickets.length; // Maintenant le vrai total est correct !
 
 const filteredTickets = useMemo(() => {
     if (ticketTypeFilter === 'all') return tickets;
-    
     return tickets.filter(t => {
-    
         const typeStr = String(t.type).toLowerCase();
         if (ticketTypeFilter === '1') return typeStr === '1' || typeStr.includes('incident');
         if (ticketTypeFilter === '2') return typeStr === '2' || typeStr.includes('demande');
@@ -97,36 +167,17 @@ const filteredTickets = useMemo(() => {
 const ticketStats = useMemo(() => {
     const stats = { nouveaux: 0, enAttente: 0, assignes: 0, planifies: 0, resolus: 0, fermes: 0 };      
     filteredTickets.forEach(ticket => {
-        const rawStatus = ticket.status !== undefined ? ticket.status : ticket.statut;  
-        if (rawStatus === undefined || rawStatus === null) {
-            return; 
-        }
-        let statusToTest = rawStatus;
-        if (typeof rawStatus === 'object') {
-            statusToTest = rawStatus.id !== undefined ? rawStatus.id : (rawStatus.name || rawStatus.value);
-        }
-
-        const statusStr = String(statusToTest).toLowerCase();
-
-        if (statusStr === '1' || statusStr.includes('nouveau') || statusStr === 'new') {
-            stats.nouveaux++;
-        } else if (statusStr === '2' || statusStr.includes('assign') || statusStr.includes('cours')) {
-            stats.assignes++;
-        } else if (statusStr === '3' || statusStr.includes('planifi')) {
-            stats.planifies++;
-        } else if (statusStr === '4' || statusStr.includes('attente') || statusStr === 'pending') {
-            stats.enAttente++;
-        } else if (statusStr === '5' || statusStr.includes('résolu') || statusStr.includes('resolu') || statusStr === 'solved') {
-            stats.resolus++;
-        } else if (statusStr === '6' || statusStr.includes('ferm') || statusStr.includes('clos') || statusStr === 'closed') {
-            stats.fermes++;
-        } else {
-            console.warn(`⚠️ Statut non reconnu pour le ticket ${ticket.id} :`, rawStatus);
-        }
+        const statusCode = getTicketStatusCode(ticket);
+        if (statusCode === 1) stats.nouveaux++;
+        else if (statusCode === 2) stats.assignes++;
+        else if (statusCode === 3) stats.planifies++;
+        else if (statusCode === 4) stats.enAttente++;
+        else if (statusCode === 5) stats.resolus++;
+        else if (statusCode === 6) stats.fermes++;
     });
-    
     return stats;
 }, [filteredTickets]);
+
 const filteredElements = useMemo(() => {
     if (elementCategoryFilter === 'all') return elements;
     return elements.filter(e => e.itemName === elementCategoryFilter);
@@ -135,6 +186,11 @@ const filteredElements = useMemo(() => {
 const openModalForDetails = (element) => {
     setSelectedElement(element);
     setIsModalOpen(true);
+};
+
+// Fonction pour extraire les lignes déroulées uniquement pour le Detail.jsx
+const getUnrolledTickets = (ticketList) => {
+    return ticketList.flatMap(t => t.unrolledLines || []);
 };
 
 if (loading) {
@@ -171,7 +227,7 @@ return (
                 <select 
                     value={ticketTypeFilter}
                     onChange={(e) => setTicketTypeFilter(e.target.value)}
-                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 shadow-sm outline-none"
+                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg block p-2.5 shadow-sm outline-none"
                 >
                     <option value="all">Tous les types</option>
                     <option value="1">Incidents uniquement</option>
@@ -180,34 +236,28 @@ return (
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <MinimalTile 
-                    title="Nouveaux" count={ticketStats.nouveaux} 
-                    iconColorClass="bg-green-100 text-green-600" svgIcon={DefaultIcon}
-                    onClick={() => openModalForDetails({ name: 'Tickets entrants', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 1) })} 
+                    title="Nouveaux" count={ticketStats.nouveaux} iconColorClass="bg-green-100 text-green-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: 'Tickets entrants', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 1)) })} 
                 />
                 <MinimalTile 
-                    title="En attente" count={ticketStats.enAttente} 
-                    iconColorClass="bg-orange-100 text-orange-600" svgIcon={DefaultIcon}
-                    onClick={() => openModalForDetails({ name: 'Tickets en attente', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 4) })} 
+                    title="En attente" count={ticketStats.enAttente} iconColorClass="bg-orange-100 text-orange-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: 'Tickets en attente', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 4)) })} 
                 />
                 <MinimalTile 
-                    title="Assignés" count={ticketStats.assignes} 
-                    iconColorClass="bg-blue-100 text-blue-600" svgIcon={DefaultIcon}
-                    onClick={() => openModalForDetails({ name: 'Tickets assignés', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 2) })} 
+                    title="Assignés" count={ticketStats.assignes} iconColorClass="bg-blue-100 text-blue-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: 'Tickets assignés', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 2)) })} 
                 />
                 <MinimalTile 
-                    title="Planifiés" count={ticketStats.planifies} 
-                    iconColorClass="bg-indigo-100 text-indigo-600" svgIcon={DefaultIcon}
-                    onClick={() => openModalForDetails({ name: 'Tickets planifiés', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 3) })} 
+                    title="Planifiés" count={ticketStats.planifies} iconColorClass="bg-indigo-100 text-indigo-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: 'Tickets planifiés', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 3)) })} 
                 />
                 <MinimalTile 
-                    title="Résolus" count={ticketStats.resolus} 
-                    iconColorClass="bg-teal-100 text-teal-600" svgIcon={DefaultIcon}
-                    onClick={() => openModalForDetails({ name: 'Tickets résolus', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 5) })} 
+                    title="Résolus" count={ticketStats.resolus} iconColorClass="bg-teal-100 text-teal-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: 'Tickets résolus', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 5)) })} 
                 />
                 <MinimalTile 
-                    title="Fermés" count={ticketStats.fermes} 
-                    iconColorClass="bg-gray-100 text-gray-500" svgIcon={DefaultIcon}
-                    onClick={() => openModalForDetails({ name: 'Tickets fermés', allItems: filteredTickets.filter(t => getTicketStatusCode(t) === 6) })} 
+                    title="Fermés" count={ticketStats.fermes} iconColorClass="bg-gray-100 text-gray-500" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: 'Tickets fermés', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 6)) })} 
                 />
             </div>
         </section>
@@ -218,7 +268,7 @@ return (
                 <select 
                     value={elementCategoryFilter}
                     onChange={(e) => setElementCategoryFilter(e.target.value)}
-                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 shadow-sm outline-none"
+                    className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg block p-2.5 shadow-sm outline-none"
                 >
                     <option value="all">Toutes les catégories</option>
                     {elements.map((e, idx) => (
@@ -229,7 +279,6 @@ return (
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredElements.map((element, index) => {
-            
                     const colors = ['bg-blue-50 text-blue-500', 'bg-emerald-50 text-emerald-500', 'bg-purple-50 text-purple-500', 'bg-amber-50 text-amber-500', 'bg-rose-50 text-rose-500'];
                     const iconColorClass = colors[index % colors.length];
 
@@ -253,8 +302,11 @@ return (
 
         {isModalOpen && (
             <Detail
+                open={isModalOpen} 
                 element={selectedElement} 
                 onClose={() => setIsModalOpen(false)}
+                dataList={selectedElement?.allItems || []} 
+                isTicketView={selectedElement?.name?.toLowerCase().includes('ticket') || selectedElement?.name?.toLowerCase().includes('entrant')}
             />
         )}
     </div>

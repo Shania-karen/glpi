@@ -14,6 +14,13 @@ export default function ResetForm({ onResetComplete }) {
       ]
     },
     {
+      category: "Documents",
+      tables: [
+        { label: "Document (liaisons)", endpoint: "Document_Item" },
+        { label: "Document (fichiers)", endpoint: "Document" },
+      ]
+    },
+    {
       category: "Éléments",
       tables: [
         { label: "Computer", endpoint: "Computer" },

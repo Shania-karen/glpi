@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchDataAPIRest, fetchGlpiData } from '../../services/apiClient';
 import { Button, Spinner, Badge } from '../templates';
-
 export default function TicketDetailView({ ticketId, onClose, onSaved }) {
   const [ticketData, setTicketData] = useState(null);
   const [timelineEvents, setTimelineEvents] = useState([]);
@@ -9,7 +8,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('timeline');
 
-  // Message input
   const [replyContent, setReplyContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const timelineEndRef = useRef(null);
@@ -23,10 +21,7 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
         fetchDataAPIRest(`Ticket/${ticketId}/TicketTask?expand_dropdowns=true`).catch(() => []),
         fetchDataAPIRest(`Ticket/${ticketId}/ITILSolution?expand_dropdowns=true`).catch(() => [])
       ]);
-
       setTicketData(ticket);
-
-      // Éléments liés — via l'ancienne API car endpoint v2.3 différent
       try {
         const items = await fetchDataAPIRest(`Ticket/${ticketId}/Item_Ticket`);
         console.log('DEBUG Item_Ticket response:', items);
@@ -46,8 +41,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
       } catch (err) {
         console.warn("Erreur chargement éléments liés:", err.message);
       }
-
-      // Timeline
       let events = [];
       if (ticket.content) {
         events.push({
@@ -57,7 +50,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           author: 'Demandeur'
         });
       }
-
       console.log('DEBUG followups array:', followups);
       const followupsArray = Array.isArray(followups) ? followups : (followups.data || []);
 
@@ -96,7 +88,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
     loadTicketDetails();
   }, [ticketId]);
 
-  // Scroll vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
     if (timelineEndRef.current) {
       timelineEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -139,10 +130,8 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
       let refusalComment = '';
       if (!isApproved) {
         refusalComment = window.prompt("Motif du refus (optionnel) :");
-        if (refusalComment === null) return; // Annulé par l'utilisateur
+        if (refusalComment === null) return; 
       }
-
-      // 1. Ajouter le suivi de refus si fourni
       if (refusalComment && refusalComment.trim() !== '') {
         await fetchDataAPIRest(`ITILFollowup`, {
           method: 'POST',
@@ -155,10 +144,8 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           }
         });
       }
-
-      // 2. Mettre à jour la solution si elle existe
       if (solutionId) {
-        const targetStatus = isApproved ? 2 : 3; // 2 = Approuvée, 3 = Refusée
+        const targetStatus = isApproved ? 2 : 3; 
         await fetchDataAPIRest(`ITILSolution/${solutionId}`, {
           method: 'PUT',
           body: {
@@ -166,8 +153,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           }
         });
       }
-
-      // 3. Forcer la mise à jour du statut du ticket (6 = Clos, 2 = En cours)
       const targetTicketStatus = isApproved ? 6 : 2;
       await fetchDataAPIRest(`Ticket/${ticketId}`, {
         method: 'PUT',
@@ -175,20 +160,17 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           input: { id: ticketId, status: targetTicketStatus }
         }
       });
-
       await loadTicketDetails();
       if (onSaved) onSaved();
     } catch (err) {
       alert("Erreur lors de l'action : " + err.message);
     }
   };
-
   const safeString = (val) => {
     if (val === null || val === undefined) return '';
     if (typeof val === 'object') return val.name || val.completename || val.id || JSON.stringify(val);
     return String(val);
   };
-
   const getEventTypeLabel = (type) => {
     const labels = {
       description: 'Description',
@@ -198,29 +180,22 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
     };
     return labels[safeString(type)] || safeString(type);
   };
-
   const getStatusLabel = (status) => {
     if (status && typeof status === 'object') return status.name || status.id;
     const map = { 1: 'Nouveau', 2: 'En cours', 3: 'En cours (Planifié)', 4: 'En attente', 5: 'Résolu', 6: 'Clos' };
     return map[status] || safeString(status);
   };
-
   const getUrgencyLabel = (u) => {
     if (u && typeof u === 'object') return u.name || u.id;
     const map = { 1: 'Très basse', 2: 'Basse', 3: 'Moyenne', 4: 'Haute', 5: 'Très haute' };
     return map[u] || safeString(u);
   };
-
   if (loading) return <div className="p-10 flex justify-center"><Spinner /></div>;
-
   const statusStr = String(ticketData?.status?.name || ticketData?.status || '').toLowerCase();
   const isResolved = ticketData?.status === 5 || ticketData?.status === '5' || statusStr.includes('résolu') || statusStr.includes('resolu');
   const pendingSolution = timelineEvents.find(e => e.type === 'solution' && e.status === 1);
-
   return (
     <div className="flex h-screen bg-white text-black font-sans">
-
-      {/* Sidebar gauche */}
       <div className="w-64 border-r border-gray-200 bg-gray-50 flex flex-col p-4">
         <Button variant="outline" className="mb-6 border-black text-black hover:bg-black hover:text-white" onClick={onClose}>
           ← Retour
@@ -249,15 +224,12 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           </button>
         </nav>
       </div>
-
-      {/* Contenu principal */}
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
         <div className="px-6 pt-6 pb-3 border-b border-gray-200">
           <h2 className="text-2xl font-bold">
             {safeString(ticketData.name)} <span className="text-gray-400 text-lg">#{safeString(ticketData.id)}</span>
           </h2>
         </div>
-
         {isResolved && (
           <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-4 flex justify-between items-center">
             <div>
@@ -276,11 +248,8 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
             </div>
           </div>
         )}
-
-        {/* === TAB : Timeline === */}
         {activeTab === 'timeline' && (
           <>
-            {/* Zone de messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {timelineEvents.map((event, index) => (
                 <div key={index} className={`flex ${event.type === 'followup' ? 'justify-end' : 'justify-start'}`}>
@@ -295,7 +264,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
                         {getEventTypeLabel(event.type)}
                       </Badge>
                     </div>
-
                     <div className="text-sm" dangerouslySetInnerHTML={{ __html: event.content }}></div>
 
                     {event.type === 'solution' && event.status === 1 && (
@@ -315,8 +283,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
               ))}
               <div ref={timelineEndRef} />
             </div>
-
-            {/* Zone de saisie de message */}
             <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
               <div className="flex gap-3 items-end">
                 <textarea
@@ -339,8 +305,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
             </div>
           </>
         )}
-
-        {/* === TAB : Éléments liés === */}
         {activeTab === 'items' && (
           <div className="flex-1 overflow-y-auto p-6">
             <h3 className="font-bold text-lg mb-4">Éléments liés au ticket</h3>
@@ -361,8 +325,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
             )}
           </div>
         )}
-
-        {/* === TAB : Statistiques === */}
         {activeTab === 'stats' && (
           <div className="flex-1 overflow-y-auto p-6">
             <h3 className="font-bold text-lg mb-4">Statistiques du ticket</h3>
@@ -387,8 +349,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           </div>
         )}
       </div>
-
-      {/* Sidebar droite — Informations */}
       <div className="w-80 border-l border-gray-200 bg-gray-50 p-6 overflow-y-auto">
         <h3 className="font-bold text-lg mb-4">Niveaux de services</h3>
 
@@ -406,9 +366,7 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
               {ticketData.time_to_resolve ? new Date(ticketData.time_to_resolve).toLocaleString() : 'Non défini'}
             </p>
           </div>
-
           <hr className="my-4 border-gray-200" />
-
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Statut:</span>
@@ -425,7 +383,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
               </span>
             </div>
           </div>
-
           {linkedItems.length > 0 && (
             <>
               <hr className="my-4 border-gray-200" />
@@ -442,7 +399,6 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
           )}
         </div>
       </div>
-
     </div>
   );
 }
