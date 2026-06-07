@@ -72,9 +72,17 @@ useEffect(() => {
             
             const rawTasks = Array.isArray(dataTasks) ? dataTasks : (dataTasks?.data || []);
             const rawCosts = Array.isArray(dataCosts) ? dataCosts : (dataCosts?.data || []);
+            console.log('rawCosts pour ticket 130:', rawCosts
+                .filter(c => String(c.tickets_id?.id || c.tickets_id) === '130')
+                .map(c => ({ 
+                    id: c.id, 
+                    cost_fixed: c.cost_fixed, 
+                    cost_time: c.cost_time,
+                    actiontime: c.actiontime 
+                }))
+            );
             const rawTickets = Array.isArray(dataTickets) ? dataTickets : (dataTickets?.data || []);
 
-            // 🟢 CORRECTION : Traitement intelligent des tickets uniques
             const activeTickets = rawTickets
                 .filter(ticket => ticket.is_deleted !== true)
                 .map(ticket => {
@@ -94,6 +102,7 @@ useEffect(() => {
                     } else {
                         // On parcourt les coûts et on cherche la tâche correspondante (Smart Match)
                         associatedCosts.forEach(cost => {
+                            console.log('avant match:', availableTasks.length, 'tâches restantes');
                             const costTimeVal = parseFloat(String(cost.cost_time?.value || cost.cost_time || 0).replace(',', '.'));
                             const costFixedVal = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.'));
                             
@@ -109,7 +118,6 @@ useEffect(() => {
                                 if (taskIdx !== -1) matchedTask = availableTasks.splice(taskIdx, 1)[0];
                             }
 
-                            // Si rien ne correspond exactement, on prend la première tâche restante
                             if (!matchedTask && availableTasks.length > 0) {
                                 matchedTask = availableTasks.shift();
                             }
@@ -120,10 +128,12 @@ useEffect(() => {
                                 cost_fixed: costFixedVal,
                                 cost_time: costTimeVal
                             });
+                            console.log('matchedTask:', matchedTask?.id, '| restantes après:', availableTasks.length);
                         });
 
                         // S'il reste des tâches sans coût
                         availableTasks.forEach(task => {
+                             console.log('⚠️ tâche orpheline ajoutée:', task.id, 'pour ticket:', ticket.id);
                             unrolledLines.push({
                                 ...ticket,
                                 actiontime: parseInt(task.actiontime?.value || task.actiontime || 0, 10),
@@ -138,6 +148,11 @@ useEffect(() => {
                         ...ticket,
                         unrolledLines
                     };
+                });
+                activeTickets.forEach(t => {
+                    if (t.unrolledLines.length > 1) {
+                        console.log(`Ticket #${t.id} → ${t.unrolledLines.length} lignes`, t.unrolledLines);
+                    }
                 });
 
             setTickets(activeTickets); // tickets contient des tickets UNIQUES

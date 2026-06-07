@@ -47,7 +47,7 @@ export default function TicketCreate() {
         });
       }
 
-      navigate('/tickets');
+      navigate('/mes-elements');
     } catch (err) {
       alert("Erreur lors de la création du ticket : " + err.message);
     } finally {

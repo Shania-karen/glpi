@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import SidebarLayout from './components/layouts/SidebarLayout';
+import ProtectedRoute from './components/layouts/ProtectedRoute';
 import Accueil from './pages/Accueil';
 import ExempleUI from './pages/ExempleUI';
 import TicketList from './components/ticket/TicketList';
@@ -17,7 +18,7 @@ function App() {
       <Routes>
         <Route element={<SidebarLayout />}>
           <Route index element={<Accueil />} />
-          <Route path="tickets" element={<TicketList />} />
+          <Route path="tickets" element={<ProtectedRoute><TicketList /></ProtectedRoute>} />
           <Route path="tickets/new" element={<TicketCreate />} />
           <Route path="mes-elements" element={<AssetList />} />
           <Route path="exemple" element={<ExempleUI />} />

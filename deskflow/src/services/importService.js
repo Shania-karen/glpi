@@ -1,19 +1,7 @@
-/**
- * importService.js
- * Service d'importation GLPI - Pipeline en 4 phases
- * Phase 1: Extraction & Nettoyage
- * Phase 2: Dry Run (validation pré-import, aucun POST)
- * Phase 3: Import Bulk avec tracking des IDs créés
- * Phase 4: Rollback agressif sur erreur (DELETE ?force_purge=true)
- */
-
 import Papa from 'papaparse';
 import JSZip from 'jszip';
 import { fetchDataAPIRest } from './apiClient';
 
-// ─────────────────────────────────────────────
-// CONSTANTES GLPI
-// ─────────────────────────────────────────────
 const GLPI_STATUS_MAP = {
   'En production': 1,
   'En panne':      4,
@@ -51,14 +39,8 @@ const ITEMTYPE_MAP = {
   'Software': 'Software',
 };
 
-// Taille des lots pour les appels API parallèles
 const BATCH_SIZE = 10;
 
-// ─────────────────────────────────────────────
-// UTILITAIRES
-// ─────────────────────────────────────────────
-
-/** Exécute un tableau de promesses par lots pour éviter de surcharger l'API */
 async function runInBatches(items, asyncFn, onProgress) {
   const results = [];
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
@@ -70,7 +52,6 @@ async function runInBatches(items, asyncFn, onProgress) {
   return results;
 }
 
-/** Parse un CSV depuis un File object, retourne un tableau d'objets */
 function parseCsv(file) {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
@@ -82,13 +63,11 @@ function parseCsv(file) {
   });
 }
 
-/** Nettoie une valeur numérique : remplace virgule par point */
 function sanitizeNumber(val) {
   if (val === null || val === undefined || val === '') return 0;
   return parseFloat(String(val).replace(',', '.')) || 0;
 }
 
-/** Fusionne date "DD/MM/YYYY" + heure "HH:mm" en "YYYY-MM-DD HH:mm:ss" */
 function buildDateTime(dateStr, timeStr) {
   if (!dateStr) return null;
   const parts = dateStr.split('/');

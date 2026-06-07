@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Modal, Button } from '../templates';
 
 export default function BackOfficeForm({ onClose }) {
-    const [ formData, setFormData ] = useState({ value: '' });
+    const [ formData, setFormData ] = useState({ value: 'motDePasse' });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
     const navigate = useNavigate();
