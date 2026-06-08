@@ -1,0 +1,5 @@
+validation 
+en tete correspondant 
+format date 
+montant doit etre positif 
+ref ticket >0 

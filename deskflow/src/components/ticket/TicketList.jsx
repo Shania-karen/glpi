@@ -7,7 +7,7 @@ import { fetchDataAPIRest } from '../../services/apiClient';
 import TicketModal from './TicketModal';
 import TicketDetailView from './TicketDetailView';
 import { useAssets } from '../../hooks/useAssets';
-import { TicketIcon , ExportIcon,ImportIcon } from '../templates';
+import { TicketIcon, ExportIcon, ImportIcon } from '../templates';
 import {
   H1, P, Button, Table, Th, Tr, Td, Badge, Alert, Spinner, Divider, Card,
 } from '../templates';
@@ -32,24 +32,24 @@ export default function TicketList() {
   const currentTickets = tickets.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
   const handleApproveSolution = async (solutionId, isApproved) => {
-  try {
-    const targetStatus = isApproved ? 2 : 3; 
-    await fetchDataAPIRest(`/ITILSolution/${solutionId}`, {
-      method: 'PATCH',
-      body: { 
-        input: { 
-          id: solutionId, 
-          status: targetStatus 
-        } 
-      }
-    });
-    
-    alert(isApproved ? "Solution approuvée (Ticket Clos)" : "Solution refusée (Retour En Cours)");
-    loadTickets(); 
-  } catch (err) {
-    alert("Erreur lors de l'approbation : " + err.message);
-  }
-};
+    try {
+      const targetStatus = isApproved ? 2 : 3;
+      await fetchDataAPIRest(`/ITILSolution/${solutionId}`, {
+        method: 'PATCH',
+        body: {
+          input: {
+            id: solutionId,
+            status: targetStatus
+          }
+        }
+      });
+
+      alert(isApproved ? "Solution approuvée (Ticket Clos)" : "Solution refusée (Retour En Cours)");
+      loadTickets();
+    } catch (err) {
+      alert("Erreur lors de l'approbation : " + err.message);
+    }
+  };
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -129,28 +129,27 @@ export default function TicketList() {
         <H1>Gestion des Tickets GLPI</H1>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="success" onClick={openModalForCreate}><TicketIcon /> Nouveau ticket</Button>
-          <Button variant="outline" onClick={handleExportCSV}><ExportIcon /> Exporter CSV</Button>
+          {/* <Button variant="outline" onClick={handleExportCSV}><ExportIcon /> Exporter CSV</Button>
           <label>
             <Button variant="secondary" as="span" className="cursor-pointer">
               <ImportIcon /> Importer CSV
-            </Button>
-            <input
+            </Button> */}
+            {/* <input
               type="file"
               accept=".csv"
               className="hidden"
               onChange={handleFileUpload}
             />
-          </label>
+          </label> */}
         </div>
       </div>
 
       {/* Import progress */}
-      {isImporting && (
+      {/* {isImporting && (
         <Alert>
           Importation en cours : {importProgress.current} / {importProgress.total} tickets traites...
         </Alert>
-      )}
+      )} */}
 
       {/* Loading */}
       {loading && <Spinner size="lg" label="Chargement des tickets en cours..." />}
@@ -162,109 +161,109 @@ export default function TicketList() {
       {!loading && !error && (
         <>
           <Table>
-          <thead>
-            <Tr>
-              <Th>ID</Th>
-              <Th>Titre</Th>
-              <Th>Statut</Th>
-              <Th>Date</Th>
-              <Th>Priorite</Th>
-              <Th>Demandeur</Th>
-              <Th>Technicien</Th>
-              <Th>Type</Th>
-              <Th>Actions</Th>
-            </Tr>
-          </thead>
-          <tbody>
-            {currentTickets.length > 0 ? (
-              currentTickets.map((ticket) => (
-                <Tr key={ticket.id}>
-                  <Td>{ticket.id}</Td>
-                  <Td className="font-medium text-black">{ticket.name || 'Sans titre'}</Td>
-                  <Td>
-                    <Badge variant={getStatusVariant(ticket.status?.name || ticket.status)}>{ticket.status?.name || ticket.status || '-'}</Badge>
-                  </Td>
-                  <Td>{ticket.date}</Td>
-                  <Td>
-                    <Badge variant={getPriorityVariant(ticket.priority?.name || ticket.priority)}>{ticket.priority?.name || ticket.priority || '-'}</Badge>
-                  </Td>
-                  <Td>
-                    {ticket.team?.find(t => t.role === 'requester')?.name || ticket.user_recipient?.name || '-'}
-                  </Td>
-                  <Td>
-                    {ticket.team?.find(t => t.role === 'assigned')?.name || 'Non assigne'}
-                  </Td>
-                  <Td><Badge variant={getTypeTicketVariant(ticket.type)}>{getTypeTicketText(ticket.type)}</Badge></Td>
-                  <Td>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="success" onClick={() => openModalForDetails(ticket)}>
-                        Traiter
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => openModalForEdit(ticket)}>
-                        Modifier
-                      </Button>
-                    {(ticket.status === 5 || String(ticket.status?.name || ticket.status).toLowerCase().includes('resolu')) && (
-                      <>
-                        <Button 
-                          size="sm" 
-                          variant="dark" 
-                          onClick={() => handleApproveSolution(ticket.solution_id, true)}
-                        >
-                          Approuver
+            <thead>
+              <Tr>
+                <Th>ID</Th>
+                <Th>Titre</Th>
+                <Th>Statut</Th>
+                <Th>Date</Th>
+                <Th>Priorite</Th>
+                <Th>Demandeur</Th>
+                <Th>Technicien</Th>
+                <Th>Type</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </thead>
+            <tbody>
+              {currentTickets.length > 0 ? (
+                currentTickets.map((ticket) => (
+                  <Tr key={ticket.id}>
+                    <Td>{ticket.id}</Td>
+                    <Td className="font-medium text-black">{ticket.name || 'Sans titre'}</Td>
+                    <Td>
+                      <Badge variant={getStatusVariant(ticket.status?.name || ticket.status)}>{ticket.status?.name || ticket.status || '-'}</Badge>
+                    </Td>
+                    <Td>{ticket.date}</Td>
+                    <Td>
+                      <Badge variant={getPriorityVariant(ticket.priority?.name || ticket.priority)}>{ticket.priority?.name || ticket.priority || '-'}</Badge>
+                    </Td>
+                    <Td>
+                      {ticket.team?.find(t => t.role === 'requester')?.name || ticket.user_recipient?.name || '-'}
+                    </Td>
+                    <Td>
+                      {ticket.team?.find(t => t.role === 'assigned')?.name || 'Non assigne'}
+                    </Td>
+                    <Td><Badge variant={getTypeTicketVariant(ticket.type)}>{getTypeTicketText(ticket.type)}</Badge></Td>
+                    <Td>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="success" onClick={() => openModalForDetails(ticket)}>
+                          Traiter
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="warning" 
-                          onClick={() => handleApproveSolution(ticket.solution_id, false)}
-                        >
-                          Refuser
-                        </Button>
-                      </>
-                    )}
-                      <Button size="sm" variant="danger" onClick={() => console.log('Supprimer', ticket.id)}>
-                        Supprimer
-                      </Button>
-                    </div>
+                        {/* <Button size="sm" variant="outline" onClick={() => openModalForEdit(ticket)}>
+                          Modifier
+                        </Button> */}
+                        {(ticket.status === 5 || String(ticket.status?.name || ticket.status).toLowerCase().includes('resolu')) && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="dark"
+                              onClick={() => handleApproveSolution(ticket.solution_id, true)}
+                            >
+                              Approuver
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="warning"
+                              onClick={() => handleApproveSolution(ticket.solution_id, false)}
+                            >
+                              Refuser
+                            </Button>
+                          </>
+                        )}
+                        {/* <Button size="sm" variant="danger" onClick={() => console.log('Supprimer', ticket.id)}>
+                          Supprimer
+                        </Button> */}
+                      </div>
+                    </Td>
+                  </Tr>
+                ))
+              ) : (
+                <Tr>
+                  <Td colSpan="9" className="text-center py-8 text-neutral-400">
+                    Aucun ticket trouve.
                   </Td>
                 </Tr>
-              ))
-            ) : (
-              <Tr>
-                <Td colSpan="9" className="text-center py-8 text-neutral-400">
-                  Aucun ticket trouve.
-                </Td>
-              </Tr>
-            )}
-          </tbody>
-        </Table>
-        
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between mt-4 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-          <div className="text-sm text-neutral-500">
-            Affichage de <strong>{tickets.length > 0 ? (activePage - 1) * itemsPerPage + 1 : 0}</strong> à <strong>{Math.min(activePage * itemsPerPage, tickets.length)}</strong> sur <strong>{tickets.length}</strong> tickets
+              )}
+            </tbody>
+          </Table>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+            <div className="text-sm text-neutral-500">
+              Affichage de <strong>{tickets.length > 0 ? (activePage - 1) * itemsPerPage + 1 : 0}</strong> à <strong>{Math.min(activePage * itemsPerPage, tickets.length)}</strong> sur <strong>{tickets.length}</strong> tickets
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={activePage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              >
+                Précédent
+              </Button>
+              <span className="text-sm font-medium text-black px-3 py-1 bg-neutral-100 rounded-md border border-neutral-200">
+                Page {activePage} sur {totalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={activePage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              >
+                Suivant
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={activePage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            >
-              Précédent
-            </Button>
-            <span className="text-sm font-medium text-black px-3 py-1 bg-neutral-100 rounded-md border border-neutral-200">
-              Page {activePage} sur {totalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={activePage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            >
-              Suivant
-            </Button>
-          </div>
-        </div>
         </>
       )}
 

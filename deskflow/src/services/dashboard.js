@@ -66,6 +66,7 @@ export async function getElements() {
         const standardAssets = [
             { itemtype: 'Computer', name: 'Ordinateurs' },
             { itemtype: 'Monitor', name: 'Moniteurs' },
+            { itemtype: 'UninterruptiblePowerSupply', name: 'Onduleurs' },
             { itemtype: 'NetworkEquipment', name: 'Matériels réseau' },
             { itemtype: 'Peripheral', name: 'Périphériques' },
             { itemtype: 'Phone', name: 'Téléphones' },

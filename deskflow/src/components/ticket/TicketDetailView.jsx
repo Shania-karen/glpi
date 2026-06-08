@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { fetchDataAPIRest, fetchGlpiData } from '../../services/apiClient';
 import { Button, Spinner, Badge } from '../templates';
 
@@ -54,6 +54,8 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
   const [linkedItems, setLinkedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('timeline');
+  const [ticketCosts, setTicketCosts] = useState([]);
+  const [ticketTasks, setTicketTasks] = useState([]);
 
   const [replyContent, setReplyContent] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -62,13 +64,20 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
   const loadTicketDetails = async () => {
     setLoading(true);
     try {
-      const [ticket, followups, tasks, solutions] = await Promise.all([
+      const [ticket, followups, tasks, solutions, costs] = await Promise.all([
         fetchDataAPIRest(`Ticket/${ticketId}?expand_dropdowns=true`),
         fetchDataAPIRest(`Ticket/${ticketId}/ITILFollowup?expand_dropdowns=true`).catch(() => []),
         fetchDataAPIRest(`Ticket/${ticketId}/TicketTask?expand_dropdowns=true`).catch(() => []),
-        fetchDataAPIRest(`Ticket/${ticketId}/ITILSolution?expand_dropdowns=true`).catch(() => [])
+        fetchDataAPIRest(`Ticket/${ticketId}/ITILSolution?expand_dropdowns=true`).catch(() => []),
+        fetchDataAPIRest(`Ticket/${ticketId}/TicketCost?expand_dropdowns=true`).catch(() => [])
       ]);
       setTicketData(ticket);
+      
+      const rawCosts = Array.isArray(costs) ? costs : (costs?.data || []);
+      const rawTasks = Array.isArray(tasks) ? tasks : (tasks?.data || []);
+      setTicketCosts(rawCosts);
+      setTicketTasks(rawTasks);
+
       try {
         const items = await fetchDataAPIRest(`Ticket/${ticketId}/Item_Ticket`);
         console.log('DEBUG Item_Ticket response:', items);
@@ -106,7 +115,7 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
         content: f.content,
         author: f.users_id
       }));
-      tasks.forEach(t => events.push({
+      rawTasks.forEach(t => events.push({
         type: 'task',
         date: t.date_creation || t.date || t.date_mod || new Date().toISOString(),
         content: t.content,
@@ -140,6 +149,72 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
       timelineEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [timelineEvents]);
+
+  const unrolledLines = useMemo(() => {
+    if (!ticketData) return [];
+    const associatedCosts = [...ticketCosts].sort((a, b) => a.id - b.id);
+    const associatedTasks = [...ticketTasks].sort((a, b) => a.id - b.id);
+    
+    const availableTasks = [...associatedTasks];
+    const lines = [];
+
+    if (associatedCosts.length === 0 && availableTasks.length === 0) {
+      lines.push({ actiontime: 0, cost_fixed: 0, cost_time: 0 });
+    } else {
+      associatedCosts.forEach(cost => {
+        const costTimeVal = parseFloat(String(cost.cost_time?.value || cost.cost_time || 0).replace(',', '.'));
+        const costFixedVal = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.'));
+        
+        let matchedTask = null;
+        
+        if (costTimeVal > 0) {
+          const taskIdx = availableTasks.findIndex(t => parseInt(t.actiontime?.value || t.actiontime || 0, 10) > 0);
+          if (taskIdx !== -1) matchedTask = availableTasks.splice(taskIdx, 1)[0];
+        } else {
+          const taskIdx = availableTasks.findIndex(t => parseInt(t.actiontime?.value || t.actiontime || 0, 10) === 0);
+          if (taskIdx !== -1) matchedTask = availableTasks.splice(taskIdx, 1)[0];
+        }
+
+        if (!matchedTask && availableTasks.length > 0) {
+          matchedTask = availableTasks.shift();
+        }
+
+        lines.push({
+          actiontime: matchedTask ? parseInt(matchedTask.actiontime?.value || matchedTask.actiontime || 0, 10) : 0,
+          cost_fixed: costFixedVal,
+          cost_time: costTimeVal
+        });
+      });
+
+      availableTasks.forEach(task => {
+        lines.push({
+          actiontime: parseInt(task.actiontime?.value || task.actiontime || 0, 10),
+          cost_fixed: 0,
+          cost_time: 0
+        });
+      });
+    }
+    return lines;
+  }, [ticketData, ticketCosts, ticketTasks]);
+
+  const { fixedCostTotal, timeCostTotal } = useMemo(() => {
+    let fixedTotal = 0;
+    let hourlyRateSum = 0;
+    
+    ticketCosts.forEach(cost => {
+      const fixedVal = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.'));
+      const timeVal = parseFloat(String(cost.cost_time?.value || cost.cost_time || 0).replace(',', '.'));
+      
+      fixedTotal += isNaN(fixedVal) ? 0 : fixedVal;
+      hourlyRateSum += isNaN(timeVal) ? 0 : timeVal;
+    });
+    
+    const ticketDurationSeconds = parseInt(ticketData?.actiontime?.value || ticketData?.actiontime || 0, 10);
+    const durationHours = ticketDurationSeconds / 3600;
+    const timeTotal = durationHours * hourlyRateSum;
+    
+    return { fixedCostTotal: fixedTotal, timeCostTotal: timeTotal };
+  }, [ticketCosts, ticketData]);
 
   const handleSendFollowup = async () => {
     if (!replyContent.trim() || isSending) return;
@@ -398,6 +473,18 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
                 <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Nombre de suivis</span>
                 <p className="font-medium mt-1">{timelineEvents.filter(e => e.type === 'followup').length}</p>
               </div>
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Coût fixe total</span>
+                <p className="font-semibold mt-1 text-lg text-neutral-900">{fixedCostTotal.toFixed(2)} €</p>
+              </div>
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">Coût horaire total</span>
+                <p className="font-semibold mt-1 text-lg text-neutral-900">{timeCostTotal.toFixed(2)} €</p>
+              </div>
+              <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-lg col-span-2 text-white">
+                <span className="text-xs text-neutral-400 uppercase font-bold tracking-wider">Coût total du ticket</span>
+                <p className="font-bold mt-1 text-2xl text-white">{(fixedCostTotal + timeCostTotal).toFixed(2)} €</p>
+              </div>
             </div>
           </div>
         )}
@@ -434,6 +521,22 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
               <span className="font-semibold">
                 {ticketData.type === 1 || ticketData.type?.id === 1 || String(ticketData.type?.name || '').toLowerCase().includes('incident') ? 'Incident' : 'Demande'}
               </span>
+            </div>
+          </div>
+          <hr className="my-4 border-gray-200" />
+          <h4 className="font-bold text-sm mb-2">Coûts financiers</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Coût fixe:</span>
+              <span className="font-medium">{fixedCostTotal.toFixed(2)} €</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Coût horaire:</span>
+              <span className="font-medium">{timeCostTotal.toFixed(2)} €</span>
+            </div>
+            <div className="flex justify-between border-t border-gray-200 pt-2 font-bold">
+              <span>Total:</span>
+              <span>{(fixedCostTotal + timeCostTotal).toFixed(2)} €</span>
             </div>
           </div>
           {linkedItems.length > 0 && (

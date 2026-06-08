@@ -22,10 +22,10 @@ function App() {
           <Route path="tickets/new" element={<TicketCreate />} />
           <Route path="mes-elements" element={<AssetList />} />
           <Route path="exemple" element={<ExempleUI />} />
-          <Route path="backoffice" element={<BackOffice />} />
-          <Route path="reset" element={<ResetForm />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="backoffice/import" element={<ImportData />} />
+          <Route path="backoffice" element={<ProtectedRoute><BackOffice /></ProtectedRoute>} />
+          <Route path="reset" element={<ProtectedRoute><ResetForm /></ProtectedRoute>} />
+          <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="backoffice/import" element={<ProtectedRoute><ImportData /></ProtectedRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>

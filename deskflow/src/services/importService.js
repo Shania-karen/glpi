@@ -131,7 +131,7 @@ function parseCsv(file) {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (result) => resolve(result.data),
+      complete: (result) => resolve({ data: result.data, fields: result.meta.fields || [] }),
       error: (err) => reject(new Error(`Erreur parsing CSV "${file.name}": ${err.message}`)),
     });
   });
@@ -235,11 +235,19 @@ function buildDict(list, nameField = 'name') {
 // ─────────────────────────────────────────────
 
 export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFile) {
-  const [rawEquip, rawTickets, rawCouts] = await Promise.all([
-    csvEquipements ? parseCsv(csvEquipements) : Promise.resolve([]),
-    csvTickets ? parseCsv(csvTickets) : Promise.resolve([]),
-    csvCouts ? parseCsv(csvCouts) : Promise.resolve([]),
+  const [resEquip, resTickets, resCouts] = await Promise.all([
+    csvEquipements ? parseCsv(csvEquipements) : Promise.resolve({ data: [], fields: [] }),
+    csvTickets ? parseCsv(csvTickets) : Promise.resolve({ data: [], fields: [] }),
+    csvCouts ? parseCsv(csvCouts) : Promise.resolve({ data: [], fields: [] }),
   ]);
+
+  const rawEquip = resEquip.data;
+  const rawTickets = resTickets.data;
+  const rawCouts = resCouts.data;
+
+  const headersEquip = resEquip.fields || [];
+  const headersTickets = resTickets.fields || [];
+  const headersCouts = resCouts.fields || [];
 
   // Lire le ZIP et indexer par nom d'équipement si fourni
   const images = {}; // { "PC-ADM-001": File }
@@ -315,7 +323,14 @@ export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFi
     durationSeconds: sanitizeNumber(row['Duration_second']),
     timeCost: sanitizeNumber(row['Time_Cost']),
     fixedCost: sanitizeNumber(row['Fixed_Cost']),
+    rawDuration: row['Duration_second']?.trim() || '',
+    rawTimeCost: row['Time_Cost']?.trim() || '',
+    rawFixedCost: row['Fixed_Cost']?.trim() || '',
   }));
+
+  equipements.headers = headersEquip;
+  tickets.headers = headersTickets;
+  couts.headers = headersCouts;
 
   return { equipements, tickets, couts, images };
 }
@@ -327,6 +342,27 @@ export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFi
 export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   const errors = [];
   const log = (msg) => onLog && onLog(msg);
+
+  // 1. Validation des en-têtes correspondants
+  const headersEquip = equipements.headers || [];
+  const headersTickets = tickets.headers || [];
+  const headersCouts = couts.headers || [];
+
+  const expectedEquip = ['Name', 'Status', 'Location', 'Manufacturer', 'Item_Type', 'Model', 'Inventory_Number', 'User'];
+  const expectedTickets = ['Ref_Ticket', 'Date', 'Heure', 'Type', 'Titre', 'Description', 'Status', 'Priority', 'Items'];
+  const expectedCouts = ['Num_Ticket', 'Duration_second', 'Time_Cost', 'Fixed_Cost'];
+
+  const validateHeaders = (fileLabel, actualHeaders, expectedHeaders) => {
+    if (actualHeaders.length === 0) return;
+    const missing = expectedHeaders.filter(h => !actualHeaders.includes(h));
+    if (missing.length > 0) {
+      errors.push(`${fileLabel} : En-tête(s) manquant(s) ou incorrect(s) : ${missing.join(', ')}. Colonnes attendues : ${expectedHeaders.join(', ')}.`);
+    }
+  };
+
+  validateHeaders('Feuille 1 (Équipements)', headersEquip, expectedEquip);
+  validateHeaders('Feuille 2 (Tickets)', headersTickets, expectedTickets);
+  validateHeaders('Feuille 3 (Coûts)', headersCouts, expectedCouts);
 
   log('🔍 Vérification des doublons locaux (Feuille 1)...');
 
@@ -362,12 +398,52 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     }
   }
 
+  // Helpers pour les formats de date / heure
+  const isValidDateFormat = (dateStr) => {
+    if (!dateStr) return false;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return false;
+    const d = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const y = parseInt(parts[2], 10);
+    if (isNaN(d) || isNaN(m) || isNaN(y)) return false;
+    if (m < 1 || m > 12) return false;
+    if (d < 1 || d > 31) return false;
+    if (y < 1900 || y > 2100) return false;
+    return true;
+  };
+
+  const isValidTimeFormat = (timeStr) => {
+    if (!timeStr) return true; // optionnel
+    const parts = timeStr.split(':');
+    if (parts.length !== 2) return false;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return false;
+    if (h < 0 || h > 23) return false;
+    if (m < 0 || m > 59) return false;
+    return true;
+  };
+
   // Validation Feuille 2
   const equipNameSet = new Set(equipements.map((e) => e.name));
   for (const t of tickets) {
-    if (!t.refTicket) errors.push(`Feuille 2, ligne ${t._rowNum} : Champ "Ref_Ticket" manquant.`);
+    // 2. Validation Ref_Ticket > 0
+    const refNum = parseInt(t.refTicket, 10);
+    if (!t.refTicket || isNaN(refNum) || refNum <= 0) {
+      errors.push(`Feuille 2, ligne ${t._rowNum} : Le champ Ref_Ticket doit être un nombre entier supérieur à 0 ("${t.refTicket || ''}").`);
+    }
+
     if (!t.titre) errors.push(`Feuille 2, ligne ${t._rowNum} : Champ "Titre" manquant.`);
-    if (!t.dateTime) errors.push(`Feuille 2, ligne ${t._rowNum} : Date/Heure invalide ("${t.rawDate}" "${t.rawHeure}"). Format attendu : DD/MM/YYYY HH:mm.`);
+    
+    // 3. Validation format date
+    if (!isValidDateFormat(t.rawDate)) {
+      errors.push(`Feuille 2, ligne ${t._rowNum} : Format de Date invalide ("${t.rawDate || ''}"). Format attendu : DD/MM/YYYY.`);
+    }
+    if (t.rawHeure && !isValidTimeFormat(t.rawHeure)) {
+      errors.push(`Feuille 2, ligne ${t._rowNum} : Format d'Heure invalide ("${t.rawHeure || ''}"). Format attendu : HH:mm.`);
+    }
+
     if (t.type && TICKET_TYPE_MAP[t.type] === undefined) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Type "${t.type}" invalide. Valeurs : Incident, Request.`);
     }
@@ -388,16 +464,32 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     }
   }
 
-  // Validation Feuille 3 (références croisées)
+  // Validation Feuille 3 (références croisées et montants)
   const refTicketSet = new Set(refTickets);
   for (const c of couts) {
-    if (!c.numTicket) errors.push(`Feuille 3, ligne ${c._rowNum} : Champ "Num_Ticket" manquant.`);
-    if (c.numTicket && tickets.length > 0 && !refTicketSet.has(c.numTicket)) {
+    // 2. Validation Num_Ticket > 0
+    const numTicketVal = parseInt(c.numTicket, 10);
+    if (!c.numTicket || isNaN(numTicketVal) || numTicketVal <= 0) {
+      errors.push(`Feuille 3, ligne ${c._rowNum} : Le champ Num_Ticket doit être un nombre entier supérieur à 0 ("${c.numTicket || ''}").`);
+    } else if (tickets.length > 0 && !refTicketSet.has(c.numTicket)) {
       errors.push(`Feuille 3, ligne ${c._rowNum} : Num_Ticket "${c.numTicket}" ne correspond à aucun Ref_Ticket de la Feuille 2.`);
     }
-    if (c.durationSeconds < 0) errors.push(`Feuille 3, ligne ${c._rowNum} : Duration_second négatif.`);
-    if (c.timeCost < 0) errors.push(`Feuille 3, ligne ${c._rowNum} : Time_Cost négatif.`);
-    if (c.fixedCost < 0) errors.push(`Feuille 3, ligne ${c._rowNum} : Fixed_Cost négatif.`);
+
+    // 4. Validation montant doit être positif
+    const durationVal = parseFloat(String(c.rawDuration).replace(',', '.'));
+    if (c.rawDuration !== '' && (isNaN(durationVal) || durationVal < 0)) {
+      errors.push(`Feuille 3, ligne ${c._rowNum} : La durée Duration_second doit être un nombre positif ou nul ("${c.rawDuration}").`);
+    }
+
+    const timeVal = parseFloat(String(c.rawTimeCost).replace(',', '.'));
+    if (c.rawTimeCost !== '' && (isNaN(timeVal) || timeVal < 0)) {
+      errors.push(`Feuille 3, ligne ${c._rowNum} : Le montant Time_Cost doit être un nombre positif ou nul ("${c.rawTimeCost}").`);
+    }
+
+    const fixedVal = parseFloat(String(c.rawFixedCost).replace(',', '.'));
+    if (c.rawFixedCost !== '' && (isNaN(fixedVal) || fixedVal < 0)) {
+      errors.push(`Feuille 3, ligne ${c._rowNum} : Le montant Fixed_Cost doit être un nombre positif ou nul ("${c.rawFixedCost}").`);
+    }
   }
 
   if (errors.length > 0) {

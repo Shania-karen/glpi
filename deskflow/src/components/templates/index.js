@@ -24,4 +24,5 @@ export { default as Alert } from './Alert';
 export { default as Spinner } from './Spinner';
 export { default as Divider } from './Divider';
 export { default as Container } from './Container';
+export { default as ElementDetailSheet } from './ElementDetailSheet';
 export { TicketIcon, HomeIcon, ResetIcon, DashboardIcon,BackOfficeIcon,ImportIcon ,ElementIcon,ExportIcon} from './Icon';
