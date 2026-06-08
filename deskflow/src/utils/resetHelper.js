@@ -23,6 +23,7 @@ export const purgeSelectedTables = async (endpoints, onProgress) => {
     'Appliance',
     'Database',
     'Enclosure',
+    'DCRoom',
     'Rack',
     'PassiveDCEquipment',
     'CartridgeItem',

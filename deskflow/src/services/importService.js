@@ -79,6 +79,7 @@ const ITEMTYPE_MAP = {
 
   // Français (Traduction depuis le CSV)
   'Ordinateur': 'Computer',
+  'Salle serveur':'DCRoom',
   'Moniteur': 'Monitor',
   'Imprimante': 'Printer',
   'Téléphone': 'Phone',
@@ -947,6 +948,10 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
         const typeId = await getOrCreateType(itemType, itemType);
         const modelId = e.model ? await getOrCreateModel(itemType, e.model) : 0;
 
+        if (itemType === 'DCRoom') {
+        payload.vis_rows = parseInt(row['vis_rows'] || row['Rows'] || 1) || 1;
+        payload.vis_cols = parseInt(row['vis_cols'] || row['Cols'] || 1) || 1;
+      }
         if (typeId > 0) {
           payload.input[typeFieldName] = typeId;
         }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchGlpiData } from '../services/apiClient';
+import { fetchDataAPIRest } from '../services/apiClient';
 
 export function useTickets() {
   const [tickets, setTickets] = useState([]);
@@ -11,26 +11,47 @@ export function useTickets() {
     try {
       let allTickets = [];
       let start = 0;
-      const limit = 100;
+      const limit = 500;
+      
+      // 1. Fetch tickets using standard REST API (range pagination is fully respected)
       while (true) {
-        const data = await fetchGlpiData(`/Assistance/Ticket?expand_dropdowns=true&range=${start}-${start + limit - 1}`);
-        const list = Array.isArray(data) ? data : (data?.data || []);
-        if (!Array.isArray(list) || list.length === 0) break;
-
-        // Sécurité contre la boucle infinie si le range est ignoré par le serveur
-        if (list.length > 0 && allTickets.some(t => t.id === list[0].id)) {
-          break;
-        }
-
-        allTickets = allTickets.concat(list);
-        if (list.length < limit) break;
+        const url = `Ticket?expand_dropdowns=true&range=${start}-${start + limit - 1}`;
+        const data = await fetchDataAPIRest(url);
+        if (!data || !Array.isArray(data) || data.length === 0) break;
+        allTickets = allTickets.concat(data);
+        if (data.length < limit) break;
         start += limit;
       }
 
-      if (allTickets.length === 0) {
-        const fallbackData = await fetchGlpiData('/Assistance/Ticket?expand_dropdowns=true');
-        allTickets = Array.isArray(fallbackData) ? fallbackData : (fallbackData?.data || []);
-      }
+      // 2. Fetch all Ticket_User relationships to resolve requester and assigned technician names
+      const teamByTicketId = {};
+      const tuData = await fetchDataAPIRest('Ticket_User?expand_dropdowns=true&range=0-999').catch(() => []);
+      const tuList = Array.isArray(tuData) ? tuData : (tuData?.data || []);
+      
+      tuList.forEach(item => {
+        const ticketLink = item.links?.find(l => l.rel === 'Ticket');
+        if (!ticketLink) return;
+        const ticketId = parseInt(ticketLink.href.split('/').pop(), 10);
+        if (!ticketId) return;
+
+        if (!teamByTicketId[ticketId]) {
+          teamByTicketId[ticketId] = [];
+        }
+
+        const role = item.type === 1 ? 'requester' : (item.type === 2 ? 'assigned' : 'observer');
+        teamByTicketId[ticketId].push({
+          role,
+          name: item.users_id // username since expand_dropdowns=true is used
+        });
+      });
+
+      // 3. Reconstruct team and user_recipient properties for compatibility with the TicketList component
+      allTickets.forEach(ticket => {
+        ticket.team = teamByTicketId[ticket.id] || [];
+        ticket.user_recipient = {
+          name: ticket.users_id_recipient // username since expand_dropdowns=true is used
+        };
+      });
 
       const activeTickets = allTickets.filter(ticket => ticket.is_deleted !== true);
       setTickets(activeTickets);

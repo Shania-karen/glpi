@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTickets } from '../../hooks/useTicket';
 import { useUsers } from '../../hooks/useUser';
 import { exportTicketsToCSV } from '../../utils/csvHelper';
 import { parseCSVToTickets, processTicketImport } from '../../utils/importHelper';
-import { fetchDataAPIRest } from '../../services/apiClient';
+import { fetchDataAPIRest, fetchGlpiData } from '../../services/apiClient';
 import TicketModal from './TicketModal';
 import TicketDetailView from './TicketDetailView';
 import { useAssets } from '../../hooks/useAssets';
@@ -23,6 +23,8 @@ export default function TicketList() {
 
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
+
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -144,6 +146,8 @@ export default function TicketList() {
         </div>
       </div>
 
+
+
       {/* Import progress */}
       {/* {isImporting && (
         <Alert>
@@ -247,7 +251,7 @@ export default function TicketList() {
                 size="sm"
                 variant="outline"
                 disabled={activePage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={() => setCurrentPage(Math.max(activePage - 1, 1))}
               >
                 Précédent
               </Button>
@@ -258,7 +262,7 @@ export default function TicketList() {
                 size="sm"
                 variant="outline"
                 disabled={activePage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={() => setCurrentPage(Math.min(activePage + 1, totalPages))}
               >
                 Suivant
               </Button>
