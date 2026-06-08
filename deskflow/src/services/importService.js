@@ -1086,6 +1086,7 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
             tickets_id: ticketGlpiId,
             cost_fixed: c.fixedCost,
             cost_time: c.timeCost,
+            actiontime: c.durationSeconds,
             name: 'Coûts financiers importés',
           },
         });
