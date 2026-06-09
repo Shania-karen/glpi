@@ -57,61 +57,14 @@ const TICKET_TYPE_MAP = {
 };
 
 const ITEMTYPE_MAP = {
-  // Anglais (Noms des classes GLPI)
   'Computer': 'Computer',
   'Monitor':  'Monitor',
-  'Printer':  'Printer',
   'Phone':    'Phone',
-  'Software': 'Software',
-  'NetworkEquipment': 'NetworkEquipment',
-  'Peripheral': 'Peripheral',
-  'UninterruptiblePowerSupply': 'UninterruptiblePowerSupply',
-  'Rack': 'Rack',
-  'Database': 'Database',
-  'Chassis': 'Enclosure',
-  'Enclosure': 'Enclosure',
-  'Appliance': 'Appliance',
-  'PassiveDCEquipment': 'PassiveDCEquipment',
-  'CartridgeItem': 'CartridgeItem',
-  'PDU': 'PDU',
-  'Cable': 'Cable',
-  'ConsumableItem': 'ConsumableItem',
-
-  // Français (Traduction depuis le CSV)
   'Ordinateur': 'Computer',
-  'Salle serveur':'DCRoom',
   'Moniteur': 'Monitor',
-  'Imprimante': 'Printer',
   'Téléphone': 'Phone',
   'Telephone': 'Phone',
-  'Logiciel': 'Software',
-  'Matériel réseau': 'NetworkEquipment',
-  'Materiel reseau': 'NetworkEquipment',
-  'Réseau': 'NetworkEquipment',
-  'Reseau': 'NetworkEquipment',
-  'Périphérique': 'Peripheral',
-  'Peripherique': 'Peripheral',
-  'Onduleur': 'UninterruptiblePowerSupply',
-  'Onduleur / PDU': 'UninterruptiblePowerSupply',
-  'Baie': 'Rack',
-  'Baie (Enclosure)': 'Rack',
-  'Baies (Enclosure)': 'Rack',
-  'Base de données': 'Database',
-  'Base de donnees': 'Database',
-  'Châssis': 'Enclosure',
-  'Chassis (Enclosure)': 'Enclosure',
-  'Dispositif': 'Appliance',
-  'PassiveDCEquipment': 'PassiveDCEquipment',
-  'CartridgeItem': 'CartridgeItem',
-  'PDU': 'PDU',
-  'Cable': 'Cable',
-  'ConsumableItem': 'ConsumableItem',
-  'Câble': 'Cable',
-  'Cartouche': 'CartridgeItem',
-  'Consommable': 'ConsumableItem',
-  'Equipement passif': 'PassiveDCEquipment',
-  'Équip. Passif': 'PassiveDCEquipment',
-  'Equip. Passif': 'PassiveDCEquipment',
+ 
 };
 
 const BATCH_SIZE = 10;
@@ -782,31 +735,15 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     monitorTypeDict,
   } = dicts;
 
-  // Registre de tous les éléments créés pour le rollback
   const created = {
-    computers: [],   // { id }
+    computers: [],  
     monitors: [],
-    printers: [],
     phones: [],
-    softwares: [],
-    networks: [],
-    peripherals: [],
-    ups: [],
-    racks: [],
-    databases: [],
-    chassis: [],
-    enclosures: [],
-    appliances: [],
-    passivedcequipments: [],
-    cartridgeitems: [],
-    pdus: [],
-    cables: [],
-    consumableitems: [],
-    equipments: [], // 🟢 Registre générique pour le rollback universel
-    tickets: [],     // { id }
-    ticketTasks: [], // { id }
-    ticketCosts: [], // 🟢 NOUVEAU: Ajout du tracking des TicketCosts
-    documents: [],   // { id }
+    equipments: [], 
+    tickets: [],   
+    ticketTasks: [],
+    ticketCosts: [], 
+    documents: [],  
   };
 
   const log = (msg) => onLog && onLog(msg);
@@ -948,10 +885,6 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
         const typeId = await getOrCreateType(itemType, itemType);
         const modelId = e.model ? await getOrCreateModel(itemType, e.model) : 0;
 
-        if (itemType === 'DCRoom') {
-        payload.vis_rows = parseInt(row['vis_rows'] || row['Rows'] || 1) || 1;
-        payload.vis_cols = parseInt(row['vis_cols'] || row['Cols'] || 1) || 1;
-      }
         if (typeId > 0) {
           payload.input[typeFieldName] = typeId;
         }
@@ -965,21 +898,7 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
         const uiKeyMap = {
           'Computer': 'computers',
           'Monitor': 'monitors',
-          'Printer': 'printers',
           'Phone': 'phones',
-          'Software': 'softwares',
-          'NetworkEquipment': 'networks',
-          'Peripheral': 'peripherals',
-          'UninterruptiblePowerSupply': 'ups',
-          'Rack': 'racks',
-          'Database': 'databases',
-          'Enclosure': 'enclosures',
-          'Appliance': 'appliances',
-          'PassiveDCEquipment': 'passivedcequipments',
-          'CartridgeItem': 'cartridgeitems',
-          'PDU': 'pdus',
-          'Cable': 'cables',
-          'ConsumableItem': 'consumableitems',
         };
         const uiKey = uiKeyMap[itemType];
         if (uiKey && created[uiKey]) {
@@ -993,15 +912,13 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
       });
     }
 
-    // ── ÉTAPE 2 : Tickets ──
     log('🎫 Import des tickets...');
     const refToGlpiTicketId = {}; // "1" -> 42 (ID GLPI)
     const ticketsToUpdateStatus = []; // { id, status }
 
     await runInBatches(tickets, async (t) => {
       const targetStatus = TICKET_STATUS_MAP[t.status] ?? 1;
-      // Si le statut final est planifié (3), en attente (4), résolu (5) ou clos (6), on le crée temporairement en "En cours" (2)
-      // pour permettre la liaison d'éléments (Item_Ticket) et l'ajout de tâches/coûts
+
       const initialStatus = (targetStatus === 3 || targetStatus === 4 || targetStatus === 5 || targetStatus === 6) ? 2 : targetStatus;
 
       const payload = {
@@ -1029,7 +946,6 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
       onProgress && onProgress();
     });
 
-    // ── ÉTAPE 3 : Relations Item_Ticket ──
     log('🔗 Liaison équipements ↔ tickets...');
     const ticketItemRelations = [];
     for (const t of tickets) {

@@ -8,7 +8,7 @@ import BackOffice from './components/backoffice/BackOffice';
 import ResetForm from './components/ticket/ResetForm';
 import Dashboard from './components/backoffice/Dashboard';
 import ImportData from './pages/backoffice/Import';
-
+import TicketKanban from './components/ticket/TicketKanban';
 import AssetList from './pages/frontoffice/AssetList';
 import TicketCreate from './pages/frontoffice/TicketCreate';
 
@@ -22,6 +22,7 @@ function App() {
           <Route path="tickets/new" element={<TicketCreate />} />
           <Route path="mes-elements" element={<AssetList />} />
           <Route path="exemple" element={<ExempleUI />} />
+          <Route path="tickets/kanban" element={<TicketKanban />} />  
           <Route path="backoffice" element={<ProtectedRoute><BackOffice /></ProtectedRoute>} />
           <Route path="reset" element={<ProtectedRoute><ResetForm /></ProtectedRoute>} />
           <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

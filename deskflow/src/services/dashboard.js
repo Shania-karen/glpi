@@ -65,34 +65,14 @@ export async function getElements() {
 
         const standardAssets = [
             { itemtype: 'Computer', name: 'Ordinateurs' },
-            { itemtype: 'Monitor', name: 'Moniteurs' },
-            { itemtype: 'UninterruptiblePowerSupply', name: 'Onduleurs' },
-            { itemtype: 'NetworkEquipment', name: 'Matériels réseau' },
-            { itemtype: 'Peripheral', name: 'Périphériques' },
-            { itemtype: 'Phone', name: 'Téléphones' },
-            { itemtype: 'Printer', name: 'Imprimantes' },
-            { itemtype: 'Software', name: 'Logiciels' },
-            { itemtype: 'SoftwareLicense', name: 'Licences' },
-            { itemtype: 'Certificate', name: 'Certificats' },
-            { itemtype: 'Unmanaged', name: 'Équipements non gérés' },
-            { itemtype: 'Appliance', name: 'Dispositifs' },
-            { itemtype: 'Database', name: 'Bases de données' },
-            { itemtype: 'Enclosure', name: 'Châssis (Enclosures)' },
-            { itemtype: 'Rack', name: 'Baies' },
-            { itemtype: 'PassiveDCEquipment', name: 'Equip. Passif (DC)' },
-            { itemtype: 'CartridgeItem', name: 'Cartouches' },
-            { itemtype: 'PDU', name: 'PDUs' },
-            { itemtype: 'Cable', name: 'Câbles' },
-            { itemtype: 'ConsumableItem', name: 'Consommables' }
+            { itemtype: 'Monitor', name: 'Moniteurs' },      
+            { itemtype: 'Phone', name: 'Téléphones' }    
         ];
 
-        const assets = resAssets && resAssets.length > 0 ? resAssets : [];
-        standardAssets.forEach(std => {
-            if (!assets.some(a => a.itemtype === std.itemtype)) {
-                assets.push(std);
-            }
+        const assets = standardAssets.map(std =>
+            {const found = resAssets.find(a => a.itemType === std.itemtype);
+            return  found ? { ...found, ...std} : std;
         });
-
         const assetsTable = await Promise.all(assets.map(async asset => {
             const items = await fetchAllRest(`${asset.itemtype}?expand_dropdowns=true`) || [];
             const mappedItems = items.map(item => {

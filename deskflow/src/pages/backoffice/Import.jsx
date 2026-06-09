@@ -297,22 +297,7 @@ export default function Import() {
                 <div className="grid grid-cols-3 gap-3">
                   <SummaryItem label="Ordinateurs"  count={importResult.computers?.length || 0} />
                   <SummaryItem label="Moniteurs"    count={importResult.monitors?.length || 0} />
-                  <SummaryItem label="Réseau"       count={importResult.networks?.length || 0} />
-                  <SummaryItem label="Périphériques" count={importResult.peripherals?.length || 0} />
-                  <SummaryItem label="Imprimantes"  count={importResult.printers?.length || 0} />
                   <SummaryItem label="Téléphones"   count={importResult.phones?.length || 0} />
-                  <SummaryItem label="Onduleurs"    count={importResult.ups?.length || 0} />
-                  <SummaryItem label="Baies"        count={importResult.racks?.length || 0} />
-                  <SummaryItem label="Bases de données" count={importResult.databases?.length || 0} />
-                  <SummaryItem label="Châssis"      count={importResult.chassis?.length || 0} />
-                  <SummaryItem label="Châssis (Enclosures)" count={importResult.enclosures?.length || 0} />
-                  <SummaryItem label="Dispositifs"  count={importResult.appliances?.length || 0} />
-                  <SummaryItem label="Logiciels"    count={importResult.softwares?.length || 0} />
-                  <SummaryItem label="Equip. Passif (DC)" count={importResult.passivedcequipments?.length || 0} />
-                  <SummaryItem label="Cartouches"   count={importResult.cartridgeitems?.length || 0} />
-                  <SummaryItem label="PDUs"         count={importResult.pdus?.length || 0} />
-                  <SummaryItem label="Câbles"       count={importResult.cables?.length || 0} />
-                  <SummaryItem label="Consommables" count={importResult.consumableitems?.length || 0} />
                   <SummaryItem label="Tickets"      count={importResult.tickets?.length || 0} />
                   <SummaryItem label="Tâches"       count={importResult.ticketTasks?.length || 0} />
                   <SummaryItem label="Documents"    count={importResult.documents?.length || 0} />

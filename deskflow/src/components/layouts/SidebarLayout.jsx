@@ -15,7 +15,7 @@ export default function SidebarLayout() {
     !isBackOfficeAuth && { to: '/mes-elements', label: 'Liste des Éléments', icon: ElementIcon },
     //!isBackOfficeAuth && { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
     !isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
-    
+    !isBackOfficeAuth && { to: '/tickets/kanban', label: 'Tickets Kanban', icon: TicketIcon },  
     isBackOfficeAuth && { to: '/reset', label: 'Reset', icon: ResetIcon },
     isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: BackOfficeIcon },
    // isBackOfficeAuth && { to: '/backoffice/import', label: 'Import', icon: ImportIcon },
