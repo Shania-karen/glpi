@@ -306,6 +306,14 @@ return (
                     <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Éléments</span>
                     <span className="text-2xl font-bold text-emerald-600">{formatNumber(totalElements)}</span>
                 </div>
+                <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
+                    <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Coût Fixe Total</span>
+                    <span className="text-2xl font-bold text-purple-600">{totalFixedCost.toFixed(2)} €</span>
+                </div>
+                <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
+                    <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Coût Horaire Total</span>
+                    <span className="text-2xl font-bold text-amber-600">{totalTimeCost.toFixed(2)} €</span>
+                </div>
             </div>
         </div>
 
@@ -357,6 +365,19 @@ return (
                         isTicket: true
                     })} 
                />
+                {/*
+                <MinimalTile 
+                    title={t('en_attente', 'En attente')} count={ticketStats.enAttente} iconColorClass="bg-orange-100 text-orange-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_en_attente', 'Tickets en attente'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 4)) })} 
+                />
+                <MinimalTile 
+                    title={t('planifies', 'Planifiés')} count={ticketStats.planifies} iconColorClass="bg-indigo-100 text-indigo-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_planifies', 'Tickets planifiés'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 3)) })} 
+                />
+                <MinimalTile 
+                    title={t('resolus', 'Résolus')} count={ticketStats.resolus} iconColorClass="bg-teal-100 text-teal-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_resolus', 'Tickets résolus'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 5)) })} 
+                /> */}
                 <MinimalTile 
                     title={(lang === 'mg' && dbColors['termine']?.translation) ? dbColors['termine'].translation : t('termine', 'Terminé')} 
                     count={ticketStats.fermes} 

@@ -215,6 +215,7 @@ export default function AssetList() {
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('');
   const [locationId, setLocationId] = useState('');
+  const [ stateId, setStateId ]= useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -244,6 +245,18 @@ export default function AssetList() {
   const uniqueTypes = useMemo(() => {
     const types = new Set(allItems.map((item) => item._itemtype));
     return Array.from(types).sort();
+  }, [allItems]);
+
+   const uniqueStatus = useMemo(() => {
+    const names = new Set();
+    allItems.forEach((item) => {
+      const states = item.states_id?.name || item.status?.name || item.states_id;
+      if (states) {
+        const nameVal = typeof states === 'object' ? states.name : String(states);
+        if (nameVal) names.add(nameVal);
+      }
+    });
+    return Array.from(names).sort();
   }, [allItems]);
   
   const uniqueSalle = useMemo(() => {
@@ -279,9 +292,13 @@ export default function AssetList() {
       const itemLocStr = itemLoc && typeof itemLoc === 'object' ? itemLoc.name : String(itemLoc || '');
       const matchesLocation = !locationId || itemLocStr === locationId;
 
-      return matchesSearch && matchesType && matchesLocation;
+      const itemState=  item.states_id?.name || item.status?.name || item.states_id;
+      const itemStateStr= itemState && typeof itemState === 'object' ? itemState.name : String(itemState || '');
+      const matchesStates = !stateId || itemStateStr === stateId;
+
+      return matchesSearch && matchesType && matchesLocation && matchesStates;
     });
-  }, [allItems, searchTerm, typeFilter, locationId]);
+  }, [allItems, searchTerm, typeFilter, locationId,stateId]);
 
   if (loading)
     return (
@@ -329,6 +346,16 @@ export default function AssetList() {
             {uniqueTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
+              </option>
+            ))}
+          </Select>
+        </div>
+         <div className="w-full md:w-64">
+          <Select value={stateId} onChange={(e) => setStateId(e.target.value)}>
+            <option value="">tous les status</option>
+            {uniqueStatus.map((states) => (
+              <option key={states} value={states}>
+                {states}
               </option>
             ))}
           </Select>
