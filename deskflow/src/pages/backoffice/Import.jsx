@@ -101,7 +101,7 @@ export default function Import() {
     setFiles((prev) => ({ ...prev, [key]: e.dataTransfer.files?.[0] || null }));
   };
 
-  const hasAtLeastOneFile = files.csv1 || files.csv2 || files.csv3 || files.zip;
+  const hasRequiredCsvs = files.csv1 && files.csv2;
   const isRunning = ['PARSING', 'DRY_RUN', 'IMPORTING'].includes(phase);
 
   const handleLaunchImport = async () => {
@@ -123,7 +123,8 @@ export default function Import() {
       if (!dryResult.valid) {
         setValidationErrors(dryResult.errors);
         setPhase('ERRORS');
-        addLog(`❌ ${dryResult.errors.length} erreur(s). Import annulé.`);
+        dryResult.errors.forEach(err => addLog(`  [Validation] ${err}`));
+        addLog(`❌ ${dryResult.errors.length} erreur(s) détectée(s). Import annulé.`);
         return;
       }
 
@@ -216,7 +217,7 @@ export default function Import() {
               <div className="flex gap-2 flex-wrap w-full">
                 <Button
                   variant="primary"
-                  disabled={!hasAtLeastOneFile || isRunning}
+                  disabled={!hasRequiredCsvs || isRunning}
                   onClick={handleLaunchImport}
                 >
                   {isRunning ? (

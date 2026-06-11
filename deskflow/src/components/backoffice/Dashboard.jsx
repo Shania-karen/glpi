@@ -33,7 +33,30 @@ const [loading, setLoading] = useState(true);
 const [isModalOpen, setIsModalOpen] = useState(false);
 const [selectedElement, setSelectedElement] = useState(null);
 const [tickets, setTickets] = useState([]);
-const { t } = useLanguage();
+const { lang, t } = useLanguage();
+const [dbColors, setDbColors] = useState({});
+
+useEffect(() => {
+    async function fetchColors() {
+        try {
+            const res = await fetch('http://localhost:8081/api/colors');
+            if (res.ok) {
+                const data = await res.json();
+                const colorsMap = {};
+                data.forEach(item => {
+                    colorsMap[item.status] = {
+                        color: item.color,
+                        translation: item.translation
+                    };
+                });
+                setDbColors(colorsMap);
+            }
+        } catch (err) {
+            console.error('Failed to fetch colors from SQLite:', err);
+        }
+    }
+    fetchColors();
+}, []);
 
 const [ticketTypeFilter, setTicketTypeFilter] = useState('all'); 
 const [elementCategoryFilter, setElementCategoryFilter] = useState('all');
@@ -295,12 +318,26 @@ return (
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <MinimalTile 
-                    title={t('nouveaux', 'Nouveaux')} count={ticketStats.nouveaux} iconColorClass="bg-green-100 text-green-600" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: t('tickets_entrants', 'Tickets entrants'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 1)) })} 
+                    title={(lang === 'mg' && dbColors['nouveau']?.translation) ? dbColors['nouveau'].translation : t('nouveau', 'Nouveau')} 
+                    count={ticketStats.nouveaux} 
+                    iconColorClass="bg-green-100 text-green-600" 
+                    svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ 
+                        name: (lang === 'mg' && dbColors['nouveau']?.translation) ? dbColors['nouveau'].translation : t('nouveau', 'Nouveau'), 
+                        allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 1)),
+                        isTicket: true
+                    })} 
                 />
                 <MinimalTile 
-                   title={t('assignes', 'Assignés')} count={ticketStats.assignes} iconColorClass="bg-blue-100 text-blue-600" svgIcon={DefaultIcon} 
-                   onClick={() => openModalForDetails({ name: t('tickets_assignes', 'Tickets assignés'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 2)) })} 
+                    title={(lang === 'mg' && dbColors['in_progress']?.translation) ? dbColors['in_progress'].translation : t('in_progress', 'En cours')} 
+                    count={ticketStats.assignes} 
+                    iconColorClass="bg-blue-100 text-blue-600" 
+                    svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ 
+                        name: (lang === 'mg' && dbColors['in_progress']?.translation) ? dbColors['in_progress'].translation : t('in_progress', 'En cours'), 
+                        allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 2)),
+                        isTicket: true
+                    })} 
                />
                 {/*
                 <MinimalTile 
@@ -316,8 +353,15 @@ return (
                     onClick={() => openModalForDetails({ name: t('tickets_resolus', 'Tickets résolus'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 5)) })} 
                 /> */}
                 <MinimalTile 
-                    title={t('fermes', 'Fermés')} count={ticketStats.fermes} iconColorClass="bg-gray-100 text-gray-500" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: t('tickets_fermes', 'Tickets fermés'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 6)) })} 
+                    title={(lang === 'mg' && dbColors['termine']?.translation) ? dbColors['termine'].translation : t('termine', 'Terminé')} 
+                    count={ticketStats.fermes} 
+                    iconColorClass="bg-gray-100 text-gray-500" 
+                    svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ 
+                        name: (lang === 'mg' && dbColors['termine']?.translation) ? dbColors['termine'].translation : t('termine', 'Terminé'), 
+                        allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 6)),
+                        isTicket: true
+                    })} 
                 />
             </div>
         </section>
@@ -366,7 +410,7 @@ return (
                 element={selectedElement} 
                 onClose={() => setIsModalOpen(false)}
                 dataList={selectedElement?.allItems || []} 
-                isTicketView={selectedElement?.name?.toLowerCase().includes('ticket') || selectedElement?.name?.toLowerCase().includes('entrant')}
+                isTicketView={selectedElement?.isTicket || selectedElement?.name?.toLowerCase().includes('ticket') || selectedElement?.name?.toLowerCase().includes('entrant')}
             />
         )}
     </div>

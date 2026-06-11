@@ -14,16 +14,36 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const { items_ids, ...ticketData } = formData;
+      const { items_ids } = formData;
+      
+      const allowedFields = [
+        'id', 'name', 'content', 'date', 'type', 'itilcategories_id', 
+        'status', 'requesttypes_id', 'external_id', 'urgency', 'impact', 
+        'priority', 'actiontime'
+      ];
+      
+      const ticketPayload = {};
+      allowedFields.forEach(field => {
+        if (formData[field] !== undefined) {
+          if (formData[field] && typeof formData[field] === 'object') {
+            ticketPayload[field] = formData[field].id;
+          } else {
+            ticketPayload[field] = formData[field];
+          }
+        }
+      });
+
       let currentTicketId = ticket?.id;
       if (ticket) {
         await fetchGlpiData(`/Assistance/Ticket/${ticket.id}`, { 
           method: 'PATCH', 
-          body: ticketData });
+          body: ticketPayload 
+        });
       } else {
         const response = await fetchGlpiData('/Assistance/Ticket', { 
           method: 'POST', 
-          body: ticketData });
+          body: ticketPayload 
+        });
         currentTicketId = response.id;
       }
 
@@ -62,9 +82,9 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
           }
         };
 
-        if (ticketData._users_id_assign !== undefined) await syncActor(currentTicketId, ticketData._users_id_assign, 2);
-        if (ticketData._users_id_requester !== undefined) await syncActor(currentTicketId, ticketData._users_id_requester, 1);
-        if (ticketData._users_id_observer !== undefined) await syncActor(currentTicketId, ticketData._users_id_observer, 3);
+        if (formData._users_id_assign !== undefined) await syncActor(currentTicketId, formData._users_id_assign, 2);
+        if (formData._users_id_requester !== undefined) await syncActor(currentTicketId, formData._users_id_requester, 1);
+        if (formData._users_id_observer !== undefined) await syncActor(currentTicketId, formData._users_id_observer, 3);
       }
       onSaved();
       onClose();

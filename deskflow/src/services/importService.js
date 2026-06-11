@@ -18,6 +18,7 @@ const TICKET_STATUS_MAP = {
   'Assigned':    2,
   'Assigné':     2,
   'Assigne':     2,
+  'In progress (assigned)': 2,
   'Closed':      6,
   'Clos':        6,
 };
@@ -69,6 +70,11 @@ async function runInBatches(items, asyncFn, onProgress) {
     if (onProgress) onProgress(Math.min(i + BATCH_SIZE, items.length), items.length);
   }
   return results;
+}
+
+function isEmptyRow(row) {
+  if (!row) return true;
+  return Object.values(row).every(val => val === null || val === undefined || String(val).trim() === '');
 }
 
 function parseCsv(file) {
@@ -136,19 +142,20 @@ function buildDateTime(dateStr, timeStr) {
 function parseItemsColumn(raw) {
   if (!raw || raw.trim() === '') return [];
   const trimmed = raw.trim();
+  
   if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim());
-    } catch {}
-    try {
-      const cleaned = trimmed.replace(/[']/g, '"');
-      const parsed = JSON.parse(cleaned);
-      if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim());
-    } catch {}
+    // Extract all strings wrapped in single or double quotes
+    const matches = [...trimmed.matchAll(/["']([^"']+)["']/g)].map(m => m[1].trim());
+    if (matches.length > 0) {
+      return matches.filter(Boolean);
+    }
+    // Fallback if no quotes found inside brackets (e.g. [PC-ADM-001, MN-FORM-002])
+    const cleaned = trimmed.slice(1, -1).trim();
+    return cleaned.split(/[\s,]+/).map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
   }
-  // Fallback to comma-separated list
-  return trimmed.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+  
+  // Fallback to comma/space separated list
+  return trimmed.split(/[\s,]+/).map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
 }
 
 /** Récupère TOUTES les entrées d'un endpoint GLPI (paginé) */
@@ -223,9 +230,9 @@ export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFi
     csvCouts ? parseCsv(csvCouts) : Promise.resolve({ data: [], fields: [] }),
   ]);
 
-  const rawEquip = resEquip.data;
-  const rawTickets = resTickets.data;
-  const rawCouts = resCouts.data;
+  const rawEquip = resEquip.data.filter(row => !isEmptyRow(row));
+  const rawTickets = resTickets.data.filter(row => !isEmptyRow(row));
+  const rawCouts = resCouts.data.filter(row => !isEmptyRow(row));
 
   const headersEquip = resEquip.fields || [];
   const headersTickets = resTickets.fields || [];
@@ -267,22 +274,50 @@ export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFi
     await Promise.all(imgPromises);
   }
 
-  // Nettoyage Feuille 1 (Équipements)
-  const equipements = rawEquip.map((row, idx) => ({
-    _rowNum: idx + 2,
-    name: row['Name']?.trim() || '',
-    status: row['Status']?.trim() || '',
-    location: row['Location']?.trim() || '',
-    manufacturer: row['Manufacturer']?.trim() || '',
-    itemType: row['Item_Type']?.trim() || '',
-    model: row['Model']?.trim() || '',
-    inventoryNumber: row['Inventory_Number']?.trim() || '',
-    user: row['User']?.trim() || '',
-  }));
+  // Nettoyage Feuille 1 (Équipements) avec dédoublonnage par nom (insensible à la casse)
+  const seenNames = new Set();
+  const equipements = [];
+  rawEquip.forEach((row, idx) => {
+    const name = row['Name']?.trim() || '';
+    const status = row['Status']?.trim() || '';
+    const location = row['Location']?.trim() || '';
+    const manufacturer = row['Manufacturer']?.trim() || '';
+    const itemType = row['Item_Type']?.trim() || '';
+    const model = row['Model']?.trim() || '';
+    const inventoryNumber = row['Inventory_Number']?.trim() || '';
+    const user = row['User']?.trim() || '';
+
+    if (!name) return; // ignorer sans nom
+
+    const nameKey = name.toLowerCase().trim();
+    if (seenNames.has(nameKey)) {
+      return; // Doublon par nom ignoré
+    }
+    seenNames.add(nameKey);
+
+    equipements.push({
+      _rowNum: idx + 2,
+      name,
+      status,
+      location,
+      manufacturer,
+      itemType,
+      model,
+      inventoryNumber,
+      user,
+    });
+  });
+
+  const equipNameSet = new Set(equipements.map((e) => e.name.toLowerCase().trim()));
 
   // Nettoyage Feuille 2 (Tickets)
   const tickets = rawTickets.map((row, idx) => {
     const itemsParsed = parseItemsColumn(row['Items']);
+    // Filtre tolérant pour les équipements non-existants
+    const validItems = itemsParsed.filter(itemName => 
+      equipNameSet.has(itemName.toLowerCase().trim())
+    );
+
     return {
       _rowNum: idx + 2,
       refTicket: row['Ref_Ticket']?.trim() || '',
@@ -290,11 +325,11 @@ export async function phase1_extract(csvEquipements, csvTickets, csvCouts, zipFi
       rawDate: row['Date']?.trim() || '',
       rawHeure: row['Heure']?.trim() || '',
       type: row['Type']?.trim() || '',
-      titre: row['Titre']?.trim() || '',
-      description: row['Description']?.trim() || '',
+      titre: row['Titre']?.trim() || 'sans titre',
+      description: row['Description']?.trim() || 'sans description',
       status: row['Status']?.trim() || '',
       priority: row['Priority']?.trim() || '',
-      items: itemsParsed, // null si parsing raté, [] si vide, tableau sinon
+      items: validItems,
     };
   });
 
@@ -325,6 +360,21 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   const errors = [];
   const log = (msg) => onLog && onLog(msg);
 
+  // 0. Enforce presence of all sheets
+  if (!equipements || equipements.length === 0) {
+    errors.push("La Feuille 1 (Équipements) est vide ou manquante.");
+  }
+  if (!tickets || tickets.length === 0) {
+    errors.push("La Feuille 2 (Tickets) est vide ou manquante.");
+  }
+  if (!couts || couts.length === 0) {
+    log("ℹ️ Info : La Feuille 3 (Coûts et Tâches) est vide ou manquante. Les coûts ne seront pas importés.");
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
   // 1. Validation des en-têtes correspondants
   const headersEquip = equipements.headers || [];
   const headersTickets = tickets.headers || [];
@@ -348,11 +398,11 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
 
   log('🔍 Vérification des doublons locaux (Feuille 1)...');
 
-  // Doublons sur Inventory_Number
-  const inventoryNums = equipements.map((e) => e.inventoryNumber).filter(Boolean);
+  // Doublons sur Inventory_Number (Simple avertissement)
+  const inventoryNums = equipements.map((e) => e.inventoryNumber.trim().toUpperCase()).filter(Boolean);
   const dupInventory = inventoryNums.filter((v, i) => inventoryNums.indexOf(v) !== i);
   if (dupInventory.length > 0) {
-    errors.push(`Doublons de numéros d'inventaire dans la Feuille 1 : ${[...new Set(dupInventory)].join(', ')}`);
+    log(`⚠️ Avertissement : Doublons de numéros d'inventaire dans la Feuille 1 : ${[...new Set(dupInventory)].join(', ')} (tolerés)`);
   }
 
   // Doublons sur Name (Avertissement simple, non bloquant)
@@ -377,6 +427,9 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     if (!e.itemType) errors.push(`Feuille 1, ligne ${e._rowNum} : Champ "Item_Type" manquant.`);
     if (e.itemType && getMapValue(ITEMTYPE_MAP, e.itemType) === undefined) {
       errors.push(`Feuille 1, ligne ${e._rowNum} : Item_Type "${e.itemType}" non supporté. Valeurs acceptées : ${Object.keys(ITEMTYPE_MAP).join(', ')}.`);
+    }
+    if (e.status && getMapValue(GLPI_STATUS_MAP, e.status) === undefined) {
+      errors.push(`Feuille 1, ligne ${e._rowNum} : Statut "${e.status}" invalide. Valeurs acceptées : ${Object.keys(GLPI_STATUS_MAP).join(', ')}.`);
     }
   }
 
@@ -443,7 +496,7 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Colonne "Items" impossible à parser. Vérifiez le format JSON.`);
     } else if (Array.isArray(t.items)) {
       for (const itemName of t.items) {
-        if (equipements.length > 0 && !equipNameSet.has(itemName.toLowerCase().trim())) {
+        if (!equipNameSet.has(itemName.toLowerCase().trim())) {
           errors.push(`Feuille 2, ligne ${t._rowNum} : L'équipement "${itemName}" (Items) n'existe pas dans la Feuille 1.`);
         }
       }
@@ -457,7 +510,7 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     const numTicketVal = parseInt(c.numTicket, 10);
     if (!c.numTicket || isNaN(numTicketVal) || numTicketVal <= 0) {
       errors.push(`Feuille 3, ligne ${c._rowNum} : Le champ Num_Ticket doit être un nombre entier supérieur à 0 ("${c.numTicket || ''}").`);
-    } else if (tickets.length > 0 && !refTicketSet.has(c.numTicket)) {
+    } else if (!refTicketSet.has(c.numTicket)) {
       errors.push(`Feuille 3, ligne ${c._rowNum} : Num_Ticket "${c.numTicket}" ne correspond à aucun Ref_Ticket de la Feuille 2.`);
     }
 

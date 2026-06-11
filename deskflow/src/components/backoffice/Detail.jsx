@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from "../templates";
 import { fetchDataAPIRest } from '../../services/apiClient';
+import { useLanguage } from '../../context/LanguageContext';
 
 const extractValue = (field) => {
     if (field === null || field === undefined || field === '' || field === 0 || field === '0') return null;
@@ -83,23 +84,6 @@ const stripHtml = (html) => {
     return text.length > 50 ? text.substring(0, 50) + '...' : text;
 };
 
-const formatTicketStatus = (statusField) => {
-    if (!statusField) return <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">Inconnu</span>;
-    const id = typeof statusField === 'object' ? parseInt(statusField.id, 10) : parseInt(statusField, 10);
-
-    switch (id) {
-        case 1: return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Nouveau</span>;
-        case 2: return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">En cours</span>;
-        case 3: return <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Planifié</span>;
-        case 4: return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">En attente</span>;
-        case 5: return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">Résolu</span>;
-        case 6: return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">Clos</span>;
-        default: 
-            const text = typeof statusField === 'object' ? statusField.name : String(statusField);
-            return <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">{text || 'Inconnu'}</span>;
-    }
-};
-
 function GlpiDocumentImage({ docId, alt, className, onError }) {
     const [src, setSrc] = useState(null);
     const [error, setError] = useState(false);
@@ -130,6 +114,63 @@ function GlpiDocumentImage({ docId, alt, className, onError }) {
 }
 
 export default function Detail({ open, onClose, element, isTicketView, dataList = [] }) {
+    const { lang, t } = useLanguage();
+    const [dbColors, setDbColors] = useState({});
+
+    useEffect(() => {
+        async function fetchColors() {
+            try {
+                const res = await fetch('http://localhost:8081/api/colors');
+                if (res.ok) {
+                    const data = await res.json();
+                    const colorsMap = {};
+                    data.forEach(item => {
+                        colorsMap[item.status] = {
+                            color: item.color,
+                            translation: item.translation
+                        };
+                    });
+                    setDbColors(colorsMap);
+                }
+            } catch (err) {
+                console.error('Failed to fetch colors from SQLite:', err);
+            }
+        }
+        if (open) {
+            fetchColors();
+        }
+    }, [open]);
+
+    const formatTicketStatus = (statusField) => {
+        if (!statusField) return <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">{t('inconnu', 'Inconnu')}</span>;
+        const id = typeof statusField === 'object' ? parseInt(statusField.id, 10) : parseInt(statusField, 10);
+
+        let statusText = '';
+        let colorClass = '';
+
+        switch (id) {
+            case 1:
+                statusText = (lang === 'mg' && dbColors['nouveau']?.translation) ? dbColors['nouveau'].translation : t('nouveau', 'Nouveau');
+                colorClass = "bg-green-100 text-green-700";
+                break;
+            case 2:
+            case 3:
+            case 4:
+                statusText = (lang === 'mg' && dbColors['in_progress']?.translation) ? dbColors['in_progress'].translation : t('in_progress', 'En cours');
+                colorClass = id === 2 ? "bg-yellow-100 text-yellow-700" : id === 3 ? "bg-indigo-100 text-indigo-700" : "bg-orange-100 text-orange-700";
+                break;
+            case 5:
+            case 6:
+                statusText = (lang === 'mg' && dbColors['termine']?.translation) ? dbColors['termine'].translation : t('termine', 'Terminé');
+                colorClass = id === 5 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700";
+                break;
+            default:
+                statusText = typeof statusField === 'object' ? statusField.name : String(statusField);
+                colorClass = "bg-gray-100 text-gray-600";
+        }
+        return <span className={`px-2 py-1 ${colorClass} rounded-full text-xs font-semibold`}>{statusText}</span>;
+    };
+
     if (!open) return null;
 
     const RenderImageCell = ({ item }) => {
