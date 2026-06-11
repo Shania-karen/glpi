@@ -21,11 +21,28 @@ public class ColorController {
 
     @PostMapping
     public Color saveColor(@RequestBody Color color) {
-        return colorRepository.findByStatus(color.getStatus())
-            .map(existing -> {
-                existing.setColor(color.getColor());
-                return colorRepository.save(existing);
-            })
-            .orElseGet(() -> colorRepository.save(color));
+        if (color.getId() != null) {
+            return colorRepository.findById(color.getId())
+                .map(existing -> {
+                    existing.setStatus(color.getStatus());
+                    existing.setColor(color.getColor());
+                    existing.setTranslation(color.getTranslation());
+                    return colorRepository.save(existing);
+                })
+                .orElseGet(() -> colorRepository.save(color));
+        } else {
+            return colorRepository.findByStatus(color.getStatus())
+                .map(existing -> {
+                    existing.setColor(color.getColor());
+                    existing.setTranslation(color.getTranslation());
+                    return colorRepository.save(existing);
+                })
+                .orElseGet(() -> colorRepository.save(color));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteColor(@PathVariable Long id) {
+        colorRepository.deleteById(id);
     }
 }

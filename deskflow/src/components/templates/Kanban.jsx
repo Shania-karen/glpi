@@ -58,7 +58,7 @@ Kanban.Column = function KanbanColumn({ id, title, count, children, horizontal =
   return (
     <div
       className={`flex flex-col rounded-xl bg-neutral-50/70 border transition-all duration-200 ${
-        horizontal ? 'w-full' : 'flex-1 min-w-[280px] max-w-[360px]'
+        horizontal ? 'w-full' : 'flex-1 min-w-[220px] max-w-[280px]'
       } ${
         isOver
           ? 'border-neutral-900 bg-neutral-100/90 shadow-sm'
@@ -71,11 +71,11 @@ Kanban.Column = function KanbanColumn({ id, title, count, children, horizontal =
       {...rest}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200/50">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-200/50">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-neutral-800 text-sm tracking-wide">{title}</span>
+          <span className="font-semibold text-neutral-800 text-xs tracking-wide">{title}</span>
           {count !== undefined && (
-            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-bold bg-neutral-200/80 text-neutral-600 rounded-full">
+            <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[9px] font-bold bg-neutral-200/80 text-neutral-600 rounded-full">
               {count}
             </span>
           )}
@@ -83,10 +83,10 @@ Kanban.Column = function KanbanColumn({ id, title, count, children, horizontal =
       </div>
 
       {/* Column Body */}
-      <div className={`flex-1 p-3 ${
+      <div className={`flex-1 p-2 ${
         horizontal 
-          ? 'flex flex-row gap-3 overflow-x-auto min-h-[150px] items-start' 
-          : 'overflow-y-auto space-y-3 min-h-[200px] max-h-[600px]'
+          ? 'flex flex-row gap-2.5 overflow-x-auto min-h-[120px] items-start' 
+          : 'overflow-y-auto space-y-2 min-h-[150px] max-h-[450px]'
       }`}>
         {children}
       </div>
@@ -118,7 +118,7 @@ Kanban.Card = function KanbanCard({ id, columnId, draggable = true, children, cl
       draggable={draggable}
       onDragStart={draggable ? handleDragStart : undefined}
       onDragEnd={draggable ? handleDragEnd : undefined}
-      className={`bg-white border border-neutral-200 rounded-lg p-3 shadow-sm hover:shadow hover:border-neutral-300 transition-all duration-150 ${
+      className={`bg-white border border-neutral-200 rounded-lg p-2.5 shadow-sm hover:shadow hover:border-neutral-300 transition-all duration-150 ${
         draggable ? 'cursor-grab active:cursor-grabbing' : ''
       } ${
         isDragging ? 'opacity-30 border-dashed border-neutral-400 bg-neutral-50/50 shadow-none' : ''
@@ -132,7 +132,7 @@ Kanban.Card = function KanbanCard({ id, columnId, draggable = true, children, cl
 
 Kanban.Card.Header = function KanbanCardHeader({ className = '', children, ...rest }) {
   return (
-    <div className={`flex items-start justify-between gap-2 mb-1.5 ${className}`} {...rest}>
+    <div className={`flex items-start justify-between gap-1.5 mb-1.5 ${className}`} {...rest}>
       {children}
     </div>
   );
@@ -140,7 +140,7 @@ Kanban.Card.Header = function KanbanCardHeader({ className = '', children, ...re
 
 Kanban.Card.Body = function KanbanCardBody({ className = '', children, ...rest }) {
   return (
-    <div className={`text-xs text-neutral-600 mb-2.5 break-words line-clamp-3 ${className}`} {...rest}>
+    <div className={`text-xs text-neutral-600 mb-1.5 break-words line-clamp-3 ${className}`} {...rest}>
       {children}
     </div>
   );

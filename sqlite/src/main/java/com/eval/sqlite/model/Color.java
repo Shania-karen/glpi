@@ -14,11 +14,17 @@ public class Color{
     private Long id;
     private String color;
     private String status;
+    private String translation;
 
     public Color(){}
     public Color(String color, String status){
         this.color=color;
         this.status=status;
+    }
+    public Color(String color, String status, String translation){
+        this.color=color;
+        this.status=status;
+        this.translation=translation;
     }
     
     public Long getId() { return id;}
@@ -27,5 +33,6 @@ public class Color{
     public void setColor(String color) { this.color = color;}
     public String getStatus() { return status;}
     public void setStatus(String status) {this.status = status;}
-    
+    public String getTranslation() { return translation;}
+    public void setTranslation(String translation) { this.translation = translation;}
 }

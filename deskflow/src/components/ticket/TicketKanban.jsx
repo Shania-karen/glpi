@@ -1,18 +1,72 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Kanban, Badge, Spinner } from '../templates';
 import { useTickets } from '../../hooks/useTicket';
 import { updateTicketStatus } from '../../utils/ticketHelper';
 import { NavLink } from 'react-router-dom';
+import TicketFiche from './TicketFiche';
+import { useLanguage } from '../../context/LanguageContext';
+
 export default function TicketKanban() {
 const { tickets, loading, error, loadTickets } = useTickets();
 const [activeColumnId, setActiveColumnId] = useState(null);
-const statuses = [
-    { id: 'nouveau', title: 'Nouveau', color: 'blue' },
-    { id: 'in_progress', title: 'In progress', color: 'orange' },
-    { id: 'termine', title: 'Terminé', color: 'success' }
-];
+const [selectedElement, setSelectedElement] = useState(null);
+const [isModalOpen, setIsModalOpen] = useState(false);
+const [dbColors, setDbColors] = useState({});
+const { lang, t } = useLanguage();
+
+const statuses = useMemo(() => [
+    { 
+        id: 'nouveau', 
+        title: (lang === 'mg' && dbColors['nouveau']?.translation) ? dbColors['nouveau'].translation : t('nouveau', 'Nouveau'), 
+        color: 'blue' 
+    },
+    { 
+        id: 'in_progress', 
+        title: (lang === 'mg' && dbColors['in_progress']?.translation) ? dbColors['in_progress'].translation : t('in_progress', 'En cours'), 
+        color: 'orange' 
+    },
+    { 
+        id: 'termine', 
+        title: (lang === 'mg' && dbColors['termine']?.translation) ? dbColors['termine'].translation : t('termine', 'Terminé'), 
+        color: 'success' 
+    }
+], [lang, dbColors, t]);
+
+useEffect(() => {
+    async function fetchColors() {
+        try {
+            const res = await fetch('http://localhost:8081/api/colors');
+            if (res.ok) {
+                const data = await res.json();
+                const colorsMap = {};
+                data.forEach(item => {
+                    colorsMap[item.status] = {
+                        color: item.color,
+                        translation: item.translation
+                    };
+                });
+                setDbColors(colorsMap);
+            }
+        } catch (err) {
+            console.error('Failed to fetch colors from SQLite:', err);
+        }
+    }
+    fetchColors();
+}, []);
+
+const getColumnStyle = (statusId) => {
+    const config = dbColors[statusId];
+    const color = config?.color;
+    if (!color) return {};
+    if (color.startsWith('#')) {
+        return { backgroundColor: color + '12' }; 
+    }
+    return { backgroundColor: color };
+};
 const getTicketColumnId = (ticket) => {
 const rawStatus = ticket.status !== undefined ? ticket.status : ticket.statut;
+
+
 if (!rawStatus) return 'nouveau';
 
 let statusToTest = rawStatus;
@@ -54,11 +108,15 @@ return (
     </div>
 );
 }
+const openModalForDetails = (element) => {
+    setSelectedElement(element);
+    setIsModalOpen(true);
+};
 
 return (
 <div className="p-6 bg-neutral-50 min-h-screen">
     <div className="mb-8">
-        <h1 className="text-2xl font-bold text-neutral-900">Kanban des Tickets</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('kanban_title', 'Kanban des Tickets')}</h1>
     </div>
 
     <Kanban onCardMove={async (ticketId, sourceColId, targetColId) => {
@@ -73,13 +131,15 @@ return (
                 ticket => getTicketColumnId(ticket) === status.id
             );
 
-            return (
+            const test='test';
+             return (
                 <Kanban.Column
                     key={status.id}
                     id={status.id}
                     title={status.title}
                     count={columnTickets.length}
-                    className={activeColumnId === status.id ? 'border-neutral-900 ring-2 ring-neutral-200/50 bg-neutral-100/50' : ''}
+                    className={activeColumnId === status.id ? 'border-neutral-900 ring-2 ring-neutral-200/50' : ''}
+                    style={getColumnStyle(status.id)}
                     onDragOver={(e) => e.preventDefault()}
                     onDragEnter={() => setActiveColumnId(status.id)}
                     onDragLeave={() => setActiveColumnId(null)}
@@ -98,7 +158,7 @@ return (
                 >
                     {columnTickets.length === 0 ? (
                         <p className="text-xs text-neutral-400 italic text-center py-8 bg-white border border-dashed border-neutral-200 rounded-lg">
-                            Aucun ticket dans cette catégorie
+                            {t('no_tickets', 'Aucun ticket dans cette catégorie')}
                         </p>
                     ) : (
                         columnTickets.map(ticket => {
@@ -107,11 +167,17 @@ return (
                                     key={ticket.id}
                                     id={ticket.id}
                                     columnId={status.id}
+                                    onClick={() => openModalForDetails({ id: ticket.id, name: ticket.name, allItems: ticket.unrolledLines || [ticket] })} 
                                     draggable={true}
                                 >
                                     <Kanban.Card.Header>
                                         <span className="font-semibold text-xs text-neutral-400">#{ticket.id}</span>
-                                        <Badge variant={status.color}>{status.title}</Badge>
+                                        <Badge 
+                                            variant={dbColors[status.id]?.color ? undefined : status.color}
+                                            style={dbColors[status.id]?.color ? { backgroundColor: dbColors[status.id].color, color: '#fff', border: 'none' } : undefined}
+                                        >
+                                            {status.title}
+                                        </Badge>
                                     </Kanban.Card.Header>
                                     
                                     <Kanban.Card.Body className="mt-2">
@@ -129,7 +195,7 @@ return (
                         <Kanban.Card draggable={false} className="border-dashed border-neutral-300 bg-neutral-50 hover:bg-neutral-100 transition-colors mt-2">
                             <Kanban.Card.Body className="flex justify-center items-center py-3">
                                 <NavLink to="/tickets/new" className="text-xs font-semibold text-neutral-700 hover:text-black">
-                                    + Ajouter un ticket
+                                    + {t('add_ticket', 'Ajouter un ticket')}
                                 </NavLink>
                             </Kanban.Card.Body>
                         </Kanban.Card>
@@ -138,6 +204,16 @@ return (
             );
         })}
     </Kanban>
+    {
+        isModalOpen && (
+            <TicketFiche
+                open={isModalOpen} 
+                ticketId={selectedElement?.id} 
+                onClose={() => setIsModalOpen(false)}
+                onSaved={loadTickets}
+            />
+        )
+    }
 </div>
 );
 }

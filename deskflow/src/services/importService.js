@@ -18,15 +18,6 @@ const TICKET_STATUS_MAP = {
   'Assigned':    2,
   'Assigné':     2,
   'Assigne':     2,
-  'Pending':     4,
-  'En attente':  4,
-  'Planned':     3,
-  'Planifié':    3,
-  'Planifie':    3,
-  'Solved':      5,
-  'Resolved':    5,
-  'Résolu':      5,
-  'Resolu':      5,
   'Closed':      6,
   'Clos':        6,
 };
@@ -82,45 +73,82 @@ async function runInBatches(items, asyncFn, onProgress) {
 
 function parseCsv(file) {
   return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => resolve({ data: result.data, fields: result.meta.fields || [] }),
-      error: (err) => reject(new Error(`Erreur parsing CSV "${file.name}": ${err.message}`)),
-    });
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result || '';
+      const firstLine = text.split(/\r?\n/)[0] || '';
+      let delimiter = '';
+      if (firstLine.includes(';')) {
+        delimiter = ';';
+      } else if (firstLine.includes(',')) {
+        delimiter = ',';
+      }
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: delimiter || undefined,
+        complete: (result) => resolve({ data: result.data, fields: result.meta.fields || [] }),
+        error: (err) => reject(new Error(`Erreur parsing CSV "${file.name}": ${err.message}`)),
+      });
+    };
+    reader.onerror = () => reject(new Error(`Impossible de lire le fichier "${file.name}"`));
+    reader.readAsText(file.slice(0, 4096)); // Lit les 4 premiers Ko pour analyser l'en-tête
   });
 }
 
+function getMapValue(map, key, defaultVal) {
+  if (!key) return defaultVal;
+  const cleanKey = String(key).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  for (const [k, v] of Object.entries(map)) {
+    const cleanK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    if (cleanK === cleanKey) return v;
+  }
+  return defaultVal;
+}
+
 function sanitizeNumber(val) {
-  if (val === null || val === undefined || val === '') return 0;
-  return parseFloat(String(val).replace(',', '.')) || 0;
+  if (val === null || val === undefined) return 0;
+  let s = String(val).trim();
+  // Strip out currency symbols, spaces, unit characters (like 's', 'h', etc)
+  s = s.replace(/[^0-9,.-]/g, '');
+  return parseFloat(s.replace(',', '.')) || 0;
 }
 
 function buildDateTime(dateStr, timeStr) {
   if (!dateStr) return null;
-  const parts = dateStr.split('/');
+  const cleanStr = String(dateStr).trim();
+  const parts = cleanStr.split(/[\/-]/);
   if (parts.length !== 3) return null;
-  const [day, month, year] = parts;
+  let day, month, year;
+  if (parts[0].length === 4) {
+    // YYYY-MM-DD
+    [year, month, day] = parts;
+  } else {
+    // DD/MM/YYYY
+    [day, month, year] = parts;
+  }
   const time = timeStr ? timeStr.trim() : '00:00';
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} ${time}:00`;
+  return `${year.padStart(4, '20')}-${month.padStart(2, '0')}-${day.padStart(2, '0')} ${time}:00`;
 }
 
-/** Parse sécurisé de la colonne Items (ex: ["PC-ADM-001","MN-FORM-002"]) */
+/** Parse sécurisé de la colonne Items (ex: ["PC-ADM-001","MN-FORM-002"] ou PC-ADM-001, MN-FORM-002) */
 function parseItemsColumn(raw) {
   if (!raw || raw.trim() === '') return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null; // invalide
-    return parsed.map((s) => String(s).trim());
-  } catch {
-    // Tentative de nettoyage manuel
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
     try {
-      const cleaned = raw.replace(/["']/g, '"').trim();
-      return JSON.parse(cleaned);
-    } catch {
-      return null; // impossible à parser
-    }
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim());
+    } catch {}
+    try {
+      const cleaned = trimmed.replace(/[']/g, '"');
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) return parsed.map((s) => String(s).trim());
+    } catch {}
   }
+  // Fallback to comma-separated list
+  return trimmed.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
 }
 
 /** Récupère TOUTES les entrées d'un endpoint GLPI (paginé) */
@@ -334,11 +362,11 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     log(`⚠️ Avertissement : Doublons de noms d'équipement dans la Feuille 1 : ${[...new Set(dupNames)].join(', ')}. Les liaisons de tickets associeront la dernière instance importée.`);
   }
 
-  // Doublons sur Ref_Ticket
+  // Doublons sur Ref_Ticket (Simple avertissement)
   const refTickets = tickets.map((t) => t.refTicket).filter(Boolean);
   const dupRefTickets = refTickets.filter((v, i) => refTickets.indexOf(v) !== i);
   if (dupRefTickets.length > 0) {
-    errors.push(`Doublons de Ref_Ticket dans la Feuille 2 : ${[...new Set(dupRefTickets)].join(', ')}`);
+    log(`⚠️ Avertissement : Doublons de Ref_Ticket dans la Feuille 2 : ${[...new Set(dupRefTickets)].join(', ')}. Seule la première occurrence sera importée.`);
   }
 
   log('🔍 Validation des champs obligatoires...');
@@ -347,7 +375,7 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   for (const e of equipements) {
     if (!e.name) errors.push(`Feuille 1, ligne ${e._rowNum} : Champ "Name" manquant.`);
     if (!e.itemType) errors.push(`Feuille 1, ligne ${e._rowNum} : Champ "Item_Type" manquant.`);
-    if (e.itemType && !ITEMTYPE_MAP[e.itemType]) {
+    if (e.itemType && getMapValue(ITEMTYPE_MAP, e.itemType) === undefined) {
       errors.push(`Feuille 1, ligne ${e._rowNum} : Item_Type "${e.itemType}" non supporté. Valeurs acceptées : ${Object.keys(ITEMTYPE_MAP).join(', ')}.`);
     }
   }
@@ -355,21 +383,25 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   // Helpers pour les formats de date / heure
   const isValidDateFormat = (dateStr) => {
     if (!dateStr) return false;
-    const parts = dateStr.split('/');
+    const cleanStr = String(dateStr).trim();
+    const parts = cleanStr.split(/[\/-]/);
     if (parts.length !== 3) return false;
-    const d = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-    const y = parseInt(parts[2], 10);
-    if (isNaN(d) || isNaN(m) || isNaN(y)) return false;
-    if (m < 1 || m > 12) return false;
-    if (d < 1 || d > 31) return false;
-    if (y < 1900 || y > 2100) return false;
+    let day, month, year;
+    if (parts[0].length === 4) {
+      [year, month, day] = parts.map(p => parseInt(p, 10));
+    } else {
+      [day, month, year] = parts.map(p => parseInt(p, 10));
+    }
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (year < 1900 || year > 2100) return false;
     return true;
   };
 
   const isValidTimeFormat = (timeStr) => {
     if (!timeStr) return true; // optionnel
-    const parts = timeStr.split(':');
+    const parts = timeStr.trim().split(':');
     if (parts.length !== 2) return false;
     const h = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10);
@@ -380,7 +412,7 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
   };
 
   // Validation Feuille 2
-  const equipNameSet = new Set(equipements.map((e) => e.name));
+  const equipNameSet = new Set(equipements.map((e) => e.name.toLowerCase().trim()));
   for (const t of tickets) {
     // 2. Validation Ref_Ticket > 0
     const refNum = parseInt(t.refTicket, 10);
@@ -392,26 +424,26 @@ export async function phase2_dryRun(equipements, tickets, couts, onLog) {
     
     // 3. Validation format date
     if (!isValidDateFormat(t.rawDate)) {
-      errors.push(`Feuille 2, ligne ${t._rowNum} : Format de Date invalide ("${t.rawDate || ''}"). Format attendu : DD/MM/YYYY.`);
+      errors.push(`Feuille 2, ligne ${t._rowNum} : Format de Date invalide ("${t.rawDate || ''}"). Format attendu : DD/MM/YYYY ou YYYY-MM-DD.`);
     }
     if (t.rawHeure && !isValidTimeFormat(t.rawHeure)) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Format d'Heure invalide ("${t.rawHeure || ''}"). Format attendu : HH:mm.`);
     }
 
-    if (t.type && TICKET_TYPE_MAP[t.type] === undefined) {
+    if (t.type && getMapValue(TICKET_TYPE_MAP, t.type) === undefined) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Type "${t.type}" invalide. Valeurs : Incident, Request.`);
     }
-    if (t.status && TICKET_STATUS_MAP[t.status] === undefined) {
+    if (t.status && getMapValue(TICKET_STATUS_MAP, t.status) === undefined) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Status ticket "${t.status}" invalide.`);
     }
-    if (t.priority && TICKET_PRIORITY_MAP[t.priority] === undefined) {
+    if (t.priority && getMapValue(TICKET_PRIORITY_MAP, t.priority) === undefined) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Priority "${t.priority}" invalide.`);
     }
     if (t.items === null) {
       errors.push(`Feuille 2, ligne ${t._rowNum} : Colonne "Items" impossible à parser. Vérifiez le format JSON.`);
     } else if (Array.isArray(t.items)) {
       for (const itemName of t.items) {
-        if (equipements.length > 0 && !equipNameSet.has(itemName)) {
+        if (equipements.length > 0 && !equipNameSet.has(itemName.toLowerCase().trim())) {
           errors.push(`Feuille 2, ligne ${t._rowNum} : L'équipement "${itemName}" (Items) n'existe pas dans la Feuille 1.`);
         }
       }
@@ -853,20 +885,52 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     }
 
     // ── ÉTAPE 1 : Équipements ──
+    log('🌐 Récupération des équipements existants dans GLPI...');
+    const existingItems = {}; // "Computer_name_pc-adm-001" -> id
+    try {
+      const [existingComputers, existingMonitors, existingPhones] = await Promise.all([
+        fetchAllGlpi('Computer').catch(() => []),
+        fetchAllGlpi('Monitor').catch(() => []),
+        fetchAllGlpi('Phone').catch(() => []),
+      ]);
+      const addToCache = (list, type) => {
+        for (const item of list) {
+          if (item.name) existingItems[`${type}_name_${item.name.toLowerCase().trim()}`] = item.id;
+          if (item.serial) existingItems[`${type}_serial_${item.serial.toLowerCase().trim()}`] = item.id;
+        }
+      };
+      addToCache(existingComputers, 'Computer');
+      addToCache(existingMonitors, 'Monitor');
+      addToCache(existingPhones, 'Phone');
+    } catch (e) {
+      log(`⚠️ Impossible de récupérer les équipements existants : ${e.message}`);
+    }
+
     log('📦 Import des équipements...');
-    const equipNameToGlpi = {}; // "PC-ADM-001" -> { id, itemtype }
+    const equipNameToGlpi = {}; // "pc-adm-001" -> { id, itemtype }
 
     // Grouper par type
     const byType = {};
     for (const e of equipements) {
-      if (!byType[e.itemType]) byType[e.itemType] = [];
-      byType[e.itemType].push(e);
+      const resolvedType = getMapValue(ITEMTYPE_MAP, e.itemType, 'Computer');
+      if (!byType[resolvedType]) byType[resolvedType] = [];
+      byType[resolvedType].push(e);
     }
 
     for (const [itemType, items] of Object.entries(byType)) {
-      const endpoint = itemType; // ex: "Computer", "Monitor", "NetworkEquipment"
+      const endpoint = itemType; // "Computer", "Monitor", "Phone"
 
       await runInBatches(items, async (e) => {
+        const nameKey = `${itemType}_name_${e.name.toLowerCase().trim()}`;
+        const serialKey = e.inventoryNumber ? `${itemType}_serial_${e.inventoryNumber.toLowerCase().trim()}` : null;
+        const existingId = existingItems[nameKey] ?? (serialKey ? existingItems[serialKey] : null);
+
+        if (existingId) {
+          log(`  ℹ️ Équipement "${e.name}" existe déjà (ID: ${existingId}). Réutilisation.`);
+          equipNameToGlpi[e.name.toLowerCase().trim()] = { id: existingId, itemtype: itemType };
+          return;
+        }
+
         const payload = {
           input: {
             name: e.name,
@@ -905,7 +969,7 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
           created[uiKey].push({ id: res.id });
         }
 
-        equipNameToGlpi[e.name] = { id: res.id, itemtype: itemType };
+        equipNameToGlpi[e.name.toLowerCase().trim()] = { id: res.id, itemtype: itemType };
       }, (done, total) => {
         log(`  → ${itemType} : ${done}/${total}`);
         onProgress && onProgress();
@@ -915,10 +979,16 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
     log('🎫 Import des tickets...');
     const refToGlpiTicketId = {}; // "1" -> 42 (ID GLPI)
     const ticketsToUpdateStatus = []; // { id, status }
+    const importedRefTickets = new Set();
 
     await runInBatches(tickets, async (t) => {
-      const targetStatus = TICKET_STATUS_MAP[t.status] ?? 1;
+      if (importedRefTickets.has(t.refTicket)) {
+        log(`  ℹ️ Ticket Ref_Ticket "${t.refTicket}" déjà traité dans cet import. Ignoré.`);
+        return;
+      }
+      importedRefTickets.add(t.refTicket);
 
+      const targetStatus = getMapValue(TICKET_STATUS_MAP, t.status, 1);
       const initialStatus = (targetStatus === 3 || targetStatus === 4 || targetStatus === 5 || targetStatus === 6) ? 2 : targetStatus;
 
       const payload = {
@@ -927,11 +997,11 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
           content: t.description,
           date: t.dateTime,
           date_creation: t.dateTime,
-          type: TICKET_TYPE_MAP[t.type] ?? 1,
+          type: getMapValue(TICKET_TYPE_MAP, t.type, 1),
           status: initialStatus,
-          priority: TICKET_PRIORITY_MAP[t.priority] ?? 3,
-          urgency: TICKET_PRIORITY_MAP[t.priority] ?? 3,
-          impact: TICKET_PRIORITY_MAP[t.priority] ?? 3,
+          priority: getMapValue(TICKET_PRIORITY_MAP, t.priority, 3),
+          urgency: getMapValue(TICKET_PRIORITY_MAP, t.priority, 3),
+          impact: getMapValue(TICKET_PRIORITY_MAP, t.priority, 3),
         },
       };
       const res = await safePost('Ticket', payload);
@@ -952,7 +1022,7 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
       const ticketGlpiId = refToGlpiTicketId[t.refTicket];
       if (!ticketGlpiId || !t.items || t.items.length === 0) continue;
       for (const itemName of t.items) {
-        const glpiItem = equipNameToGlpi[itemName];
+        const glpiItem = equipNameToGlpi[itemName.toLowerCase().trim()];
         if (!glpiItem) continue;
         ticketItemRelations.push({ ticketId: ticketGlpiId, itemId: glpiItem.id, itemtype: glpiItem.itemtype });
       }

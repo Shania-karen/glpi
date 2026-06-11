@@ -8,4 +8,94 @@ PC-LAB-002,En production,Laboratoire IA,Lenovo,Computer,ThinkCentre M75,ITU-2026
 PC-LAB-003,En production,Laboratoire IA,Dell,Computer,OptiPlex 7090,ITU-2026-0007,ITU Labs
 PC-BIB-001,En production,Bibliothèque,HP,Computer,ProDesk 600 G6,ITU-2026-0008,Bibliothèque
 PC-FORM-001,En stock,Magasin Informatique,Lenovo,Computer,ThinkCentre Neo 50,ITU-2026-0009,
-MN-FORM-002,En panne,Salle 301,Dell,Monitor,AC1000,ITU-2026-0010,Rakoto Michel
+MN-FORM-002,en panne ,Salle 301,Dell,moniteur,AC1000,ITU-2026-0010,Rakoto Michel
+TEL-ADM-001, EN PRODUCTION ,Administration,Yealink,téléphone,T46U,ITU-2026-0011,Rakoto Jean
+PC-LAB-012,maintenance,Laboratoire IA,HP,computer,ProDesk 400 G9,  ITU-2026-0012  ,Rasoanaivo Marie
+MN-FORM-013,En stock,Salle 302,Dell,Monitor,AC1000,ITU-2026-0013,
+TEL-ADM-014,En panne,Administration,Yealink,Phone,T31G,ITU-2026-0014,Rakotondranaivo Paul
+PC-BIB-015,En production,Bibliothèque,Lenovo,Computer,OptiPlex 7020,ITU-2026-0015,Rabe Hanitra
+MN-FORM-016,En stock,Magasin Informatique,HP,Monitor,EliteDisplay E243,ITU-2026-0016,
+TEL-ADM-017,Maintenance,Administration,Yealink,Phone,T48U,ITU-2026-0017,ITU Labs
+PC-COMPTA-018,En panne,Comptabilité,Dell,Computer,EliteDesk 800 G8,ITU-2026-0018,Bibliothèque
+MN-FORM-019,En production,Administration,Dell,Monitor,ThinkVision T24i,ITU-2026-0019,Rakoto Michel
+TEL-ADM-020,En stock,Administration,Yealink,Phone,T46U,ITU-2026-0020,
+PC-LAB-021,Maintenance,Laboratoire IA,Lenovo,Computer,ThinkCentre M75,ITU-2026-0021,Rakoto Jean
+MN-FORM-022,En panne,Comptabilité,HP,Monitor,AC1000,ITU-2026-0022,Rasoanaivo Marie
+TEL-ADM-023,En production,Administration,Yealink,Phone,T31G,ITU-2026-0023,Rakotondranaivo Paul
+PC-ADM-024,En stock,Administration,Dell,Computer,OptiPlex 7090,ITU-2026-0024,
+MN-FORM-025,Maintenance,Laboratoire IA,Dell,Monitor,UltraSharp 24,ITU-2026-0025,Rabe Hanitra
+TEL-ADM-026,En panne,Administration,Yealink,Phone,T48U,ITU-2026-0026,ITU Labs
+PC-COMPTA-027,En production,Comptabilité,HP,Computer,ProDesk 600 G6,ITU-2026-0027,Bibliothèque
+MN-FORM-028,En stock,Bibliothèque,HP,Monitor,EliteDisplay E243,ITU-2026-0028,
+TEL-ADM-029,Maintenance,Administration,Yealink,Phone,T46U,ITU-2026-0029,Rakoto Michel
+PC-SALLE-030,En panne,Salle 301,Lenovo,Computer,ThinkCentre Neo 50,ITU-2026-0030,Rakoto Jean
+MN-FORM-031,En production,Salle 302,Dell,Monitor,ThinkVision T24i,ITU-2026-0031,Rasoanaivo Marie
+TEL-ADM-032,En stock,Administration,Yealink,Phone,T31G,ITU-2026-0032,
+PC-SALLE-033,Maintenance,Salle 303,Dell,Computer,OptiPlex 7010,ITU-2026-0033,Rakotondranaivo Paul
+MN-FORM-034,En panne,Magasin Informatique,HP,Monitor,AC1000,ITU-2026-0034,Rabe Hanitra
+TEL-ADM-035,En production,Administration,Yealink,Phone,T48U,ITU-2026-0035,ITU Labs
+PC-FORM-036,En stock,Magasin Informatique,HP,Computer,ProDesk 400 G9,ITU-2026-0036,
+MN-FORM-037,Maintenance,Administration,Dell,Monitor,UltraSharp 24,ITU-2026-0037,Bibliothèque
+TEL-ADM-038,En panne,Administration,Yealink,Phone,T46U,ITU-2026-0038,Rakoto Michel
+PC-COMPTA-039,En production,Comptabilité,Lenovo,Computer,ThinkCentre M70,ITU-2026-0039,Rakoto Jean
+MN-FORM-040,En stock,Comptabilité,HP,Monitor,EliteDisplay E243,ITU-2026-0040,
+TEL-ADM-041,Maintenance,Administration,Yealink,Phone,T31G,ITU-2026-0041,Rasoanaivo Marie
+PC-LAB-042,En panne,Laboratoire IA,Dell,Computer,OptiPlex 7020,ITU-2026-0042,Rakotondranaivo Paul
+MN-FORM-043,En production,Laboratoire IA,Dell,Monitor,ThinkVision T24i,ITU-2026-0043,Rabe Hanitra
+TEL-ADM-044,En stock,Administration,Yealink,Phone,T48U,ITU-2026-0044,
+PC-BIB-045,Maintenance,Bibliothèque,HP,Computer,EliteDesk 800 G8,ITU-2026-0045,ITU Labs
+MN-FORM-046,En panne,Bibliothèque,HP,Monitor,AC1000,ITU-2026-0046,Bibliothèque
+TEL-ADM-047,En production,Administration,Yealink,Phone,T46U,ITU-2026-0047,Rakoto Michel
+PC-SALLE-048,En stock,Salle 301,Lenovo,Computer,ThinkCentre M75,ITU-2026-0048,
+MN-FORM-049,Maintenance,Salle 302,Dell,Monitor,UltraSharp 24,ITU-2026-0049,Rakoto Jean
+TEL-ADM-050,En panne,Administration,Yealink,Phone,T31G,ITU-2026-0050,Rasoanaivo Marie
+PC-SALLE-051,En production,Salle 303,Dell,Computer,OptiPlex 7090,ITU-2026-0051,Rakotondranaivo Paul
+MN-FORM-052,En stock,Magasin Informatique,HP,Monitor,EliteDisplay E243,ITU-2026-0052,
+TEL-ADM-053,Maintenance,Administration,Yealink,Phone,T48U,ITU-2026-0053,Rabe Hanitra
+PC-FORM-054,En panne,Magasin Informatique,HP,Computer,ProDesk 600 G6,ITU-2026-0054,ITU Labs
+MN-FORM-055,En production,Administration,Dell,Monitor,ThinkVision T24i,ITU-2026-0055,Bibliothèque
+TEL-ADM-056,En stock,Administration,Yealink,Phone,T46U,ITU-2026-0056,
+PC-COMPTA-057,Maintenance,Comptabilité,Lenovo,Computer,ThinkCentre Neo 50,ITU-2026-0057,Rakoto Michel
+MN-FORM-058,En panne,Comptabilité,HP,Monitor,AC1000,ITU-2026-0058,Rakoto Jean
+TEL-ADM-059,En production,Administration,Yealink,Phone,T31G,ITU-2026-0059,Rasoanaivo Marie
+PC-LAB-060,En stock,Laboratoire IA,Dell,Computer,OptiPlex 7010,ITU-2026-0060,
+MN-FORM-061,Maintenance,Laboratoire IA,Dell,Monitor,UltraSharp 24,ITU-2026-0061,Rakotondranaivo Paul
+TEL-ADM-062,En panne,Administration,Yealink,Phone,T48U,ITU-2026-0062,Rabe Hanitra
+PC-BIB-063,En production,Bibliothèque,HP,Computer,ProDesk 400 G9,ITU-2026-0063,ITU Labs
+MN-FORM-064,En stock,Bibliothèque,HP,Monitor,EliteDisplay E243,ITU-2026-0064,
+TEL-ADM-065,Maintenance,Administration,Yealink,Phone,T46U,ITU-2026-0065,Bibliothèque
+PC-SALLE-066,En panne,Salle 301,Lenovo,Computer,ThinkCentre M70,ITU-2026-0066,Rakoto Michel
+MN-FORM-067,En production,Salle 302,Dell,Monitor,ThinkVision T24i,ITU-2026-0067,Rakoto Jean
+TEL-ADM-068,En stock,Administration,Yealink,Phone,T31G,ITU-2026-0068,
+PC-SALLE-069,Maintenance,Salle 303,Dell,Computer,OptiPlex 7020,ITU-2026-0069,Rasoanaivo Marie
+MN-FORM-070,En panne,Magasin Informatique,HP,Monitor,AC1000,ITU-2026-0070,Rakotondranaivo Paul
+TEL-ADM-071,En production,Administration,Yealink,Phone,T48U,ITU-2026-0071,Rabe Hanitra
+PC-FORM-072,En stock,Magasin Informatique,HP,Computer,EliteDesk 800 G8,ITU-2026-0072,
+MN-FORM-073,Maintenance,Administration,Dell,Monitor,UltraSharp 24,ITU-2026-0073,ITU Labs
+TEL-ADM-074,En panne,Administration,Yealink,Phone,T46U,ITU-2026-0074,Bibliothèque
+PC-COMPTA-075,En production,Comptabilité,Lenovo,Computer,ThinkCentre M75,ITU-2026-0075,Rakoto Michel
+MN-FORM-076,En stock,Comptabilité,HP,Monitor,EliteDisplay E243,ITU-2026-0076,
+TEL-ADM-077,Maintenance,Administration,Yealink,Phone,T31G,ITU-2026-0077,Rakoto Jean
+PC-LAB-078,En panne,Laboratoire IA,Dell,Computer,OptiPlex 7090,ITU-2026-0078,Rasoanaivo Marie
+MN-FORM-079,En production,Laboratoire IA,Dell,Monitor,ThinkVision T24i,ITU-2026-0079,Rakotondranaivo Paul
+TEL-ADM-080,En stock,Administration,Yealink,Phone,T48U,ITU-2026-0080,
+PC-BIB-081,Maintenance,Bibliothèque,HP,Computer,ProDesk 600 G6,ITU-2026-0081,Rabe Hanitra
+MN-FORM-082,En panne,Bibliothèque,HP,Monitor,AC1000,ITU-2026-0082,ITU Labs
+TEL-ADM-083,En production,Administration,Yealink,Phone,T46U,ITU-2026-0083,Bibliothèque
+PC-SALLE-084,En stock,Salle 301,Lenovo,Computer,ThinkCentre Neo 50,ITU-2026-0084,
+MN-FORM-085,Maintenance,Salle 302,Dell,Monitor,UltraSharp 24,ITU-2026-0085,Rakoto Michel
+TEL-ADM-086,En panne,Administration,Yealink,Phone,T31G,ITU-2026-0086,Rakoto Jean
+PC-SALLE-087,En production,Salle 303,Dell,Computer,OptiPlex 7010,ITU-2026-0087,Rasoanaivo Marie
+MN-FORM-088,En stock,Magasin Informatique,HP,Monitor,EliteDisplay E243,ITU-2026-0088,
+TEL-ADM-089,Maintenance,Administration,Yealink,Phone,T48U,ITU-2026-0089,Rakotondranaivo Paul
+PC-FORM-090,En panne,Magasin Informatique,HP,Computer,ProDesk 400 G9,ITU-2026-0090,Rabe Hanitra
+MN-FORM-091,En production,Administration,Dell,Monitor,ThinkVision T24i,ITU-2026-0091,ITU Labs
+TEL-ADM-092,En stock,Administration,Yealink,Phone,T46U,ITU-2026-0092,
+PC-COMPTA-093,Maintenance,Comptabilité,Lenovo,Computer,ThinkCentre M70,ITU-2026-0093,Bibliothèque
+MN-FORM-094,En panne,Comptabilité,HP,Monitor,AC1000,ITU-2026-0094,Rakoto Michel
+TEL-ADM-095,En production,Administration,Yealink,Phone,T31G,ITU-2026-0095,Rakoto Jean
+PC-LAB-096,En stock,Laboratoire IA,Dell,Computer,OptiPlex 7020,ITU-2026-0096,
+MN-FORM-097,Maintenance,Laboratoire IA,Dell,Monitor,UltraSharp 24,ITU-2026-0097,Rasoanaivo Marie
+TEL-ADM-098,En panne,Administration,Yealink,Phone,T48U,ITU-2026-0098,Rakotondranaivo Paul
+PC-BIB-099,En production,Bibliothèque,HP,Computer,EliteDesk 800 G8,ITU-2026-0099,Rabe Hanitra
+MN-FORM-100,En stock,Bibliothèque,HP,Monitor,EliteDisplay E243,ITU-2026-0100,

@@ -26,4 +26,4 @@ export { default as Divider } from './Divider';
 export { default as Container } from './Container';
 export { default as ElementDetailSheet } from './ElementDetailSheet';
 export { default as Kanban } from './Kanban';
-export { TicketIcon, HomeIcon, ResetIcon, DashboardIcon,BackOfficeIcon,ImportIcon ,ElementIcon,ExportIcon} from './Icon';
+export { TicketIcon, HomeIcon, ResetIcon, DashboardIcon,BackOfficeIcon,ImportIcon ,ElementIcon,ExportIcon,ColorIcon, SettingIcon} from './Icon';

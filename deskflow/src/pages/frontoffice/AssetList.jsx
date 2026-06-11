@@ -214,6 +214,7 @@ export default function AssetList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('');
+  const [locationId, setLocationId] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -244,8 +245,19 @@ export default function AssetList() {
     const types = new Set(allItems.map((item) => item._itemtype));
     return Array.from(types).sort();
   }, [allItems]);
+  
+  const uniqueSalle = useMemo(() => {
+    const names = new Set();
+    allItems.forEach((item) => {
+      const loc = item.locations_id?.name || item.location?.name || item.locations_id;
+      if (loc) {
+        const nameVal = typeof loc === 'object' ? loc.name : String(loc);
+        if (nameVal) names.add(nameVal);
+      }
+    });
+    return Array.from(names).sort();
+  }, [allItems]);
 
-  // Filtrage multi-critère : nom, ID, type
   const filteredItems = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     return allItems.filter((item) => {
@@ -263,9 +275,13 @@ export default function AssetList() {
 
       const matchesType = !typeFilter || item._itemtype === typeFilter;
 
-      return matchesSearch && matchesType;
+      const itemLoc = item.locations_id?.name || item.location?.name || item.locations_id;
+      const itemLocStr = itemLoc && typeof itemLoc === 'object' ? itemLoc.name : String(itemLoc || '');
+      const matchesLocation = !locationId || itemLocStr === locationId;
+
+      return matchesSearch && matchesType && matchesLocation;
     });
-  }, [allItems, searchTerm, typeFilter]);
+  }, [allItems, searchTerm, typeFilter, locationId]);
 
   if (loading)
     return (
@@ -296,6 +312,16 @@ export default function AssetList() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+         <div className="w-full md:w-64">
+          <Select value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+            <option value="">Toutes les locations</option>
+            {uniqueSalle.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </Select>
         </div>
         <div className="w-full md:w-64">
           <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>

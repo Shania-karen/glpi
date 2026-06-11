@@ -18,8 +18,14 @@ public class SqliteApplication {
 	}
 
 	@Bean
-	public CommandLineRunner initData(TranslationRepository repository, ColorRepository colorRepository) {
+	public CommandLineRunner initData(TranslationRepository repository, ColorRepository colorRepository, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
 		return args -> {
+			try {
+				jdbcTemplate.execute("ALTER TABLE colors ADD COLUMN translation VARCHAR(255)");
+				System.out.println("Column 'translation' added successfully via JDBC.");
+			} catch (Exception e) {
+				System.out.println("Column 'translation' already exists or table does not exist yet: " + e.getMessage());
+			}
 			repository.deleteAll();  
 			repository.saveAll(Arrays.asList(
 					// French translations
@@ -46,13 +52,14 @@ public class SqliteApplication {
 				));
 			System.out.println("Default translations seeded into SQLite.");
 
-			colorRepository.deleteAll();
-			colorRepository.saveAll(Arrays.asList(
-				new Color("#22c55e", "nouveau"),
-				new Color("#f97316", "in_progress"),
-				new Color("#ef4444", "termine")
-			));
-			System.out.println("Default colors seeded into SQLite.");
+			if (colorRepository.count() == 0) {
+				colorRepository.saveAll(Arrays.asList(
+					new Color("#22c55e", "nouveau", "Vaovao"),
+					new Color("#f97316", "in_progress", "Efa manao"),
+					new Color("#ef4444", "termine", "Vita")
+				));
+				System.out.println("Default colors and translations seeded into SQLite.");
+			}
 		};
 	}
 }

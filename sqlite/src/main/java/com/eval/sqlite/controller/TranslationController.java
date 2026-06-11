@@ -26,7 +26,12 @@ public class TranslationController {
 
     @PostMapping
     public Translation createTranslation(@RequestBody Translation translation) {
-        return translationRepository.save(translation);
+        return translationRepository.findByLangCodeAndTranslationKey(translation.getLangCode(), translation.getTranslationKey())
+            .map(existing -> {
+                existing.setValue(translation.getValue());
+                return translationRepository.save(existing);
+            })
+            .orElseGet(() -> translationRepository.save(translation));
     }
 
     @PostMapping("/bulk")

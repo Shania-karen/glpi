@@ -1,26 +1,28 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { TicketIcon, HomeIcon, ResetIcon, DashboardIcon,BackOfficeIcon,ImportIcon ,ElementIcon} from '../templates';
+import { TicketIcon, HomeIcon, ResetIcon, DashboardIcon, BackOfficeIcon, ImportIcon, ElementIcon ,SettingIcon} from '../templates';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function SidebarLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation(); 
+  const { lang, setLang, t } = useLanguage();
 
   const isBackOfficeAuth = sessionStorage.getItem('isBackOfficeAuth') === 'true';
 
   const navItems = [
-    { to: '/', label: 'Accueil', icon: HomeIcon },
+    { to: '/', label: t('accueil', 'Accueil'), icon: HomeIcon },
     
-    !isBackOfficeAuth && { to: '/tickets/new', label: 'Nouveau Ticket', icon: TicketIcon },
-    !isBackOfficeAuth && { to: '/mes-elements', label: 'Liste des Éléments', icon: ElementIcon },
-    //!isBackOfficeAuth && { to: '/exemple', label: 'Exemple UI', icon: TicketIcon },
-    !isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: TicketIcon },
-    !isBackOfficeAuth && { to: '/tickets/kanban', label: 'Tickets Kanban', icon: TicketIcon },  
-    isBackOfficeAuth && { to: '/reset', label: 'Reset', icon: ResetIcon },
-    isBackOfficeAuth && { to: '/backoffice', label: 'BackOffice', icon: BackOfficeIcon },
-   // isBackOfficeAuth && { to: '/backoffice/import', label: 'Import', icon: ImportIcon },
-    isBackOfficeAuth && { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon},
-    isBackOfficeAuth && { to: '/tickets', label: 'Tickets', icon: TicketIcon }
+    !isBackOfficeAuth && { to: '/tickets/new', label: t('nouveau_ticket', 'Nouveau Ticket'), icon: TicketIcon },
+    !isBackOfficeAuth && { to: '/mes-elements', label: t('liste_elements', 'Liste des Éléments'), icon: ElementIcon },
+    !isBackOfficeAuth && { to: '/backoffice', label: t('backoffice', 'BackOffice'), icon: BackOfficeIcon },
+    !isBackOfficeAuth && { to: '/tickets/kanban', label: t('kanban_title', 'Tickets Kanban'), icon: TicketIcon },  
+    isBackOfficeAuth && { to: '/reset', label: t('reset', 'Reset'), icon: ResetIcon },
+    isBackOfficeAuth && { to: '/backoffice', label: t('backoffice', 'BackOffice'), icon: BackOfficeIcon },
+    isBackOfficeAuth && { to: '/dashboard', label: t('dashboard', 'Dashboard'), icon: DashboardIcon},
+    isBackOfficeAuth && { to: '/tickets', label: t('tickets', 'Tickets'), icon: TicketIcon },
+    isBackOfficeAuth && { to: 'backoffice/colors', label: t('configuration', 'Configuration'), icon: SettingIcon}
+    
   ].filter(Boolean);
 
   return (
@@ -62,6 +64,19 @@ export default function SidebarLayout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* Language Selector */}
+        <div className="px-3 py-2 border-t border-neutral-800 flex flex-col gap-1">
+          {!collapsed && <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-bold">Langue / Fiteny</span>}
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+            className="w-full bg-neutral-900 text-white border border-neutral-800 rounded px-1 py-1 text-xs outline-none cursor-pointer hover:bg-neutral-800 transition-colors"
+          >
+            <option value="fr">{collapsed ? 'FR' : 'Français'}</option>
+            <option value="mg">{collapsed ? 'MG' : 'Malagasy'}</option>
+          </select>
+        </div>
 
         {/* Collapse */}
         <button

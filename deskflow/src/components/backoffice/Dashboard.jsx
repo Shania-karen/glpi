@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { getElements } from '../../services/dashboard';
 import { fetchDataAPIRest, fetchGlpiData } from '../../services/apiClient';
 import Detail from './Detail';
-
+import { useLanguage } from '../../context/LanguageContext';
 const formatNumber = (num) => {
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num;
@@ -33,6 +33,7 @@ const [loading, setLoading] = useState(true);
 const [isModalOpen, setIsModalOpen] = useState(false);
 const [selectedElement, setSelectedElement] = useState(null);
 const [tickets, setTickets] = useState([]);
+const { t } = useLanguage();
 
 const [ticketTypeFilter, setTicketTypeFilter] = useState('all'); 
 const [elementCategoryFilter, setElementCategoryFilter] = useState('all');
@@ -200,6 +201,20 @@ const filteredTickets = useMemo(() => {
     });
 }, [tickets, ticketTypeFilter]);
 
+const totalFixedCost = useMemo(() => {
+    return filteredTickets.reduce((acc, t) => {
+        const linesCost = t.unrolledLines?.reduce((sum, line) => sum + (line.cost_fixed || 0), 0) || 0;
+        return acc + linesCost;
+    }, 0);
+}, [filteredTickets]);
+
+const totalTimeCost = useMemo(() => {
+    return filteredTickets.reduce((acc, t) => {
+        const linesCost = t.unrolledLines?.reduce((sum, line) => sum + (line.cost_time || 0), 0) || 0;
+        return acc + linesCost;
+    }, 0);
+}, [filteredTickets]);
+
 const ticketStats = useMemo(() => {
     const stats = { nouveaux: 0, enAttente: 0, assignes: 0, planifies: 0, resolus: 0, fermes: 0 };      
     filteredTickets.forEach(ticket => {
@@ -245,7 +260,7 @@ return (
                 <p className="text-gray-500 mt-1">Gérez votre centre d'assistance et votre parc informatique</p>
             </div>
             
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
                 <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
                     <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Tickets</span>
                     <span className="text-2xl font-bold text-blue-600">{formatNumber(totalTickets)}</span>
@@ -254,12 +269,20 @@ return (
                     <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Total Éléments</span>
                     <span className="text-2xl font-bold text-emerald-600">{formatNumber(totalElements)}</span>
                 </div>
+                <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
+                    <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Coût Fixe Total</span>
+                    <span className="text-2xl font-bold text-purple-600">{totalFixedCost.toFixed(2)} €</span>
+                </div>
+                <div className="bg-white px-6 py-3 rounded-lg border border-gray-100 shadow-sm flex flex-col items-center min-w-[120px]">
+                    <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Coût Horaire Total</span>
+                    <span className="text-2xl font-bold text-amber-600">{totalTimeCost.toFixed(2)} €</span>
+                </div>
             </div>
         </div>
 
         <section className="mb-12">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Statut des Tickets</h2>
+                <h2 className="text-xl font-semibold text-gray-800">{t('statut_tickets', 'Statut des Tickets')}</h2>
                 <select 
                     value={ticketTypeFilter}
                     onChange={(e) => setTicketTypeFilter(e.target.value)}
@@ -272,28 +295,29 @@ return (
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <MinimalTile 
-                    title="Nouveaux" count={ticketStats.nouveaux} iconColorClass="bg-green-100 text-green-600" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: 'Tickets entrants', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 1)) })} 
+                    title={t('nouveaux', 'Nouveaux')} count={ticketStats.nouveaux} iconColorClass="bg-green-100 text-green-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_entrants', 'Tickets entrants'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 1)) })} 
                 />
                 <MinimalTile 
-                    title="En attente" count={ticketStats.enAttente} iconColorClass="bg-orange-100 text-orange-600" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: 'Tickets en attente', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 4)) })} 
+                   title={t('assignes', 'Assignés')} count={ticketStats.assignes} iconColorClass="bg-blue-100 text-blue-600" svgIcon={DefaultIcon} 
+                   onClick={() => openModalForDetails({ name: t('tickets_assignes', 'Tickets assignés'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 2)) })} 
+               />
+                {/*
+                <MinimalTile 
+                    title={t('en_attente', 'En attente')} count={ticketStats.enAttente} iconColorClass="bg-orange-100 text-orange-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_en_attente', 'Tickets en attente'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 4)) })} 
                 />
                 <MinimalTile 
-                    title="Assignés" count={ticketStats.assignes} iconColorClass="bg-blue-100 text-blue-600" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: 'Tickets assignés', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 2)) })} 
+                    title={t('planifies', 'Planifiés')} count={ticketStats.planifies} iconColorClass="bg-indigo-100 text-indigo-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_planifies', 'Tickets planifiés'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 3)) })} 
                 />
                 <MinimalTile 
-                    title="Planifiés" count={ticketStats.planifies} iconColorClass="bg-indigo-100 text-indigo-600" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: 'Tickets planifiés', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 3)) })} 
-                />
+                    title={t('resolus', 'Résolus')} count={ticketStats.resolus} iconColorClass="bg-teal-100 text-teal-600" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_resolus', 'Tickets résolus'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 5)) })} 
+                /> */}
                 <MinimalTile 
-                    title="Résolus" count={ticketStats.resolus} iconColorClass="bg-teal-100 text-teal-600" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: 'Tickets résolus', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 5)) })} 
-                />
-                <MinimalTile 
-                    title="Fermés" count={ticketStats.fermes} iconColorClass="bg-gray-100 text-gray-500" svgIcon={DefaultIcon} 
-                    onClick={() => openModalForDetails({ name: 'Tickets fermés', allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 6)) })} 
+                    title={t('fermes', 'Fermés')} count={ticketStats.fermes} iconColorClass="bg-gray-100 text-gray-500" svgIcon={DefaultIcon} 
+                    onClick={() => openModalForDetails({ name: t('tickets_fermes', 'Tickets fermés'), allItems: getUnrolledTickets(filteredTickets.filter(t => getTicketStatusCode(t) === 6)) })} 
                 />
             </div>
         </section>

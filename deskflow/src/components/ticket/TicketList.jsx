@@ -203,9 +203,9 @@ export default function TicketList() {
                         <Button size="sm" variant="success" onClick={() => openModalForDetails(ticket)}>
                           Traiter
                         </Button>
-                        {/* <Button size="sm" variant="outline" onClick={() => openModalForEdit(ticket)}>
+                        <Button size="sm" variant="outline" onClick={() => openModalForEdit(ticket)}>
                           Modifier
-                        </Button> */}
+                        </Button>
                         {(ticket.status === 5 || String(ticket.status?.name || ticket.status).toLowerCase().includes('resolu')) && (
                           <>
                             <Button
@@ -270,7 +270,6 @@ export default function TicketList() {
           </div>
         </>
       )}
-
       {/* Modals */}
       {isModalOpen && (
         <TicketModal
@@ -279,6 +278,7 @@ export default function TicketList() {
           assets={assets}
           onClose={() => setIsModalOpen(false)}
           onSaved={loadTickets}
+          onClick={()=> console.log("ticket modal cliqueee")}
         />
       )}
 

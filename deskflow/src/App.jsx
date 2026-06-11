@@ -11,6 +11,7 @@ import ImportData from './pages/backoffice/Import';
 import TicketKanban from './components/ticket/TicketKanban';
 import AssetList from './pages/frontoffice/AssetList';
 import TicketCreate from './pages/frontoffice/TicketCreate';
+import ColorManager from './pages/backoffice/ColorManager';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="reset" element={<ProtectedRoute><ResetForm /></ProtectedRoute>} />
           <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="backoffice/import" element={<ProtectedRoute><ImportData /></ProtectedRoute>} />
+          <Route path="backoffice/colors" element={<ProtectedRoute><ColorManager /></ProtectedRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>
