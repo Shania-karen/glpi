@@ -23,13 +23,34 @@ export default function TicketCreate() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const { items_ids, ...ticketData } = formData;
+      const { items_ids, cost_fixed, cost_time, ...ticketData } = formData;
       
       const response = await fetchGlpiData('/Assistance/Ticket', { 
         method: 'POST', 
         body: ticketData 
       });
       const currentTicketId = response.id;
+
+      // Création du coût du ticket si défini
+      const fCost = parseFloat(cost_fixed) || 0;
+      const hourlyRate = parseFloat(cost_time) || 0;
+      const durationSeconds = parseInt(formData.actiontime) || 0;
+      const tCost = (durationSeconds / 3600) * hourlyRate;
+
+      if (fCost > 0 || tCost > 0) {
+        await fetchDataAPIRest('TicketCost', {
+          method: 'POST',
+          body: {
+            input: {
+              tickets_id: currentTicketId,
+              cost_fixed: fCost,
+              cost_time: tCost,
+              actiontime: durationSeconds,
+              name: 'Coût initial'
+            }
+          }
+        });
+      }
 
       if (items_ids && items_ids.length > 0) {
         const liaisonsPayload = items_ids.map(item => {

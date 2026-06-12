@@ -114,6 +114,38 @@ export default function TicketForm({ formData, onChange, users, assets }) {
 
       <Divider />
 
+      {/* Coûts financiers */}
+      <div>
+        <H3 className="mb-4">Coûts financiers</H3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormGroup label="Coût fixe (€)">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              name="cost_fixed"
+              value={formData.cost_fixed !== undefined ? formData.cost_fixed : 0}
+              onChange={onChange}
+              placeholder="0.00"
+            />
+          </FormGroup>
+
+          <FormGroup label="Coût horaire (€)">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              name="cost_time"
+              value={formData.cost_time !== undefined ? formData.cost_time : 0}
+              onChange={onChange}
+              placeholder="0.00"
+            />
+          </FormGroup>
+        </div>
+      </div>
+
+      <Divider />
+
       {/* Acteurs */}
       <div>
         <H3 className="mb-4">Acteurs</H3>

@@ -1,13 +1,35 @@
 import TicketForm from './TicketForm';
 import { fetchGlpiData, fetchDataAPIRest } from '../../services/apiClient';
 import { initialFormData } from '../../utils/TicketHelper';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Button } from '../templates';
 
 export default function TicketModal({ ticket, users, assets, onClose, onSaved }) {
   const [formData, setFormData] = useState({ ...initialFormData, ...(ticket || {}) });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+
+  useEffect(() => {
+    if (ticket && ticket.id) {
+      fetchDataAPIRest(`Ticket/${ticket.id}/TicketCost`).then(costs => {
+        const rawCosts = Array.isArray(costs) ? costs : (costs?.data || []);
+        if (rawCosts.length > 0) {
+          const firstCost = rawCosts[0];
+          const durationSeconds = parseInt(ticket.actiontime?.value || ticket.actiontime || 0, 10);
+          const durationHours = durationSeconds / 3600;
+          const totalCostTime = parseFloat(firstCost.cost_time?.value || firstCost.cost_time || 0);
+          const hourlyRate = durationHours > 0 ? (totalCostTime / durationHours) : totalCostTime;
+
+          setFormData(prev => ({
+            ...prev,
+            cost_fixed: parseFloat(firstCost.cost_fixed?.value || firstCost.cost_fixed || 0),
+            cost_time: hourlyRate,
+            _cost_id: firstCost.id
+          }));
+        }
+      }).catch(err => console.warn("Erreur récupération coûts:", err));
+    }
+  }, [ticket]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +67,39 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
           body: ticketPayload 
         });
         currentTicketId = response.id;
+      }
+
+      // Gestion des coûts financiers
+      const fCost = parseFloat(formData.cost_fixed) || 0;
+      const hourlyRate = parseFloat(formData.cost_time) || 0;
+      const durationSeconds = parseInt(formData.actiontime) || 0;
+      const tCost = (durationSeconds / 3600) * hourlyRate;
+
+      if (formData._cost_id) {
+        await fetchDataAPIRest(`TicketCost/${formData._cost_id}`, {
+          method: 'PUT',
+          body: {
+            input: {
+              id: formData._cost_id,
+              cost_fixed: fCost,
+              cost_time: tCost,
+              actiontime: durationSeconds,
+            }
+          }
+        });
+      } else if (fCost > 0 || tCost > 0) {
+        await fetchDataAPIRest('TicketCost', {
+          method: 'POST',
+          body: {
+            input: {
+              tickets_id: currentTicketId,
+              cost_fixed: fCost,
+              cost_time: tCost,
+              actiontime: durationSeconds,
+              name: 'Coût initial'
+            }
+          }
+        });
       }
 
       if (items_ids && items_ids.length > 0) {

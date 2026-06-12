@@ -199,22 +199,18 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
 
   const { fixedCostTotal, timeCostTotal } = useMemo(() => {
     let fixedTotal = 0;
-    let hourlyRateSum = 0;
+    let timeTotal = 0;
     
     ticketCosts.forEach(cost => {
       const fixedVal = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.'));
       const timeVal = parseFloat(String(cost.cost_time?.value || cost.cost_time || 0).replace(',', '.'));
       
       fixedTotal += isNaN(fixedVal) ? 0 : fixedVal;
-      hourlyRateSum += isNaN(timeVal) ? 0 : timeVal;
+      timeTotal += isNaN(timeVal) ? 0 : timeVal;
     });
     
-    const ticketDurationSeconds = parseInt(ticketData?.actiontime?.value || ticketData?.actiontime || 0, 10);
-    const durationHours = ticketDurationSeconds / 3600;
-    const timeTotal = durationHours * hourlyRateSum;
-    
     return { fixedCostTotal: fixedTotal, timeCostTotal: timeTotal };
-  }, [ticketCosts, ticketData]);
+  }, [ticketCosts]);
 
   const handleSendFollowup = async () => {
     if (!replyContent.trim() || isSending) return;
