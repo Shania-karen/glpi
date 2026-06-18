@@ -12,7 +12,7 @@ export function LanguageProvider({ children }) {
 
   async function loadTranslations() {
     try {
-      const response = await fetch('http://localhost:8081/api/translations');
+      const response = await fetch('/api/translations');
       if (!response.ok) throw new Error('Failed to fetch translations');
       const data = await response.json();
 

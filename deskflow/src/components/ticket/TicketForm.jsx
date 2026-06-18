@@ -59,7 +59,7 @@ export default function TicketForm({ formData, onChange, users, assets }) {
             </FormGroup>
 
             <FormGroup label="ID externe">
-              <Input type="text" name="external_id" value={formData.external_id} onChange={onChange} />
+              <Input type="text" name="externalid" value={formData.externalid || ''} onChange={onChange} />
             </FormGroup>
           </div>
         </div>

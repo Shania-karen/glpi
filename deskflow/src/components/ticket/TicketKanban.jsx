@@ -4,6 +4,8 @@ import { useTickets } from '../../hooks/useTicket';
 import { updateTicketStatus } from '../../utils/ticketHelper';
 import { NavLink } from 'react-router-dom';
 import TicketFiche from './TicketFiche';
+import TicketApprovalModal from './TicketApprovalModal';
+import TicketApprovalFormModal from './TicketApprovalFormModal'
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function TicketKanban() {
@@ -13,6 +15,11 @@ const [selectedElement, setSelectedElement] = useState(null);
 const [isModalOpen, setIsModalOpen] = useState(false);
 const [dbColors, setDbColors] = useState({});
 const { lang, t } = useLanguage();
+const [ sourceCol , setSourceCol]= useState(null);
+const [approvalTicketId, setApprovalTicketId] = useState(null);
+const [ approvalFormId, setApprovalFormId]=useState(null);
+const [isApprovalOpen, setIsApprovalOpen] = useState(false);
+const [isApprovalFormOpen, setIsApprovalFormOpen] = useState(false);
 
 const statuses = useMemo(() => [
     { 
@@ -35,7 +42,7 @@ const statuses = useMemo(() => [
 useEffect(() => {
     async function fetchColors() {
         try {
-            const res = await fetch('http://localhost:8081/api/colors');
+            const res = await fetch('/api/colors');
             if (res.ok) {
                 const data = await res.json();
                 const colorsMap = {};
@@ -120,10 +127,19 @@ return (
     </div>
 
     <Kanban onCardMove={async (ticketId, sourceColId, targetColId) => {
-        const newStatusId = statusMap[targetColId];
-        if (ticketId && newStatusId) {
-            await updateTicketStatus(ticketId, newStatusId);
-            loadTickets(); 
+        if (sourceColId === 'termine' && targetColId === 'in_progress') {
+            setApprovalFormId(ticketId);
+            setSourceCol(sourceColId);
+            setIsApprovalFormOpen(true);
+        } else if (targetColId === 'termine') {
+            setApprovalTicketId(ticketId);
+            setIsApprovalOpen(true);
+        } else {
+            const newStatusId = statusMap[targetColId];
+            if (ticketId && newStatusId) {
+                await updateTicketStatus(ticketId, newStatusId);
+                loadTickets();
+            }
         }
     }}>
         {statuses.map(status => {
@@ -134,6 +150,7 @@ return (
             const test='test';
              return (
                 <Kanban.Column
+                
                     key={status.id}
                     id={status.id}
                     title={status.title}
@@ -146,13 +163,21 @@ return (
                     onDrop={async (e) => {
                         e.preventDefault();
                         setActiveColumnId(null);
-                        
+
                         const ticketId = e.dataTransfer.getData('cardId');
-                        const newStatusId = statusMap[status.id];
-                        
-                        if (ticketId && newStatusId) {
-                            await updateTicketStatus(ticketId, newStatusId);
-                            loadTickets();
+                        const sourceColId = e.dataTransfer.getData('sourceColumnId');
+                        if (status.id === 'termine') {
+                            setApprovalTicketId(ticketId);
+                            setIsApprovalOpen(true);
+                        } else if (sourceColId === 'termine' && status.id === 'in_progress') {
+                            setApprovalFormId(ticketId);
+                            setIsApprovalFormOpen(true);
+                        } else {
+                            const newStatusId = statusMap[status.id];
+                            if (ticketId && newStatusId) {
+                                await updateTicketStatus(ticketId, newStatusId);
+                                loadTickets();
+                            }
                         }
                     }}
                 >
@@ -214,6 +239,39 @@ return (
             />
         )
     }
+    {isApprovalOpen && (
+    <TicketApprovalModal
+        element={selectedElement?.name}
+        ticketId={approvalTicketId}
+        open={isApprovalOpen}
+        onClose={() => {
+            setIsApprovalOpen(false);
+            setApprovalTicketId(null);
+        }}
+        onSuccess={() => {
+            setIsApprovalOpen(false);
+            setApprovalTicketId(null);
+            loadTickets(); 
+        }}
+    />
+)}
+
+    {isApprovalFormOpen && (
+    <TicketApprovalFormModal
+        element={selectedElement?.name}
+        ticketId={approvalFormId}
+        open={isApprovalFormOpen}
+        onClose={() => {
+            setIsApprovalFormOpen(false);
+            setApprovalFormId(null);
+        }}
+        onSuccess={() => {
+            setIsApprovalFormOpen(false);
+            setApprovalFormId(null);
+            loadTickets();
+        }}
+    />
+)}
 </div>
 );
 }

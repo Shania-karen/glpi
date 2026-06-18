@@ -16,7 +16,7 @@ export const generateDurationOptions = () => {
 export const initialFormData = {
   date: '', type: 1, itilcategories_id: '', status: 1,
   requesttypes_id: 1, urgency: 3, impact: 3, priority: 3,
-  actiontime: 0, external_id: '', name: '', content: '',
+  actiontime: 0, externalid: '', name: '', content: '',
   _users_id_requester: '', _users_id_observer: '', _users_id_assign: '', items_id: '',
   cost_fixed: 0, cost_time: 0
 };

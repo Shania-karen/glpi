@@ -39,7 +39,7 @@ const [dbColors, setDbColors] = useState({});
 useEffect(() => {
     async function fetchColors() {
         try {
-            const res = await fetch('http://localhost:8081/api/colors');
+            const res = await fetch('/api/colors');
             if (res.ok) {
                 const data = await res.json();
                 const colorsMap = {};

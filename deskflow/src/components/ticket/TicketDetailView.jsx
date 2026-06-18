@@ -199,16 +199,18 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
 
   const { fixedCostTotal, timeCostTotal } = useMemo(() => {
     let fixedTotal = 0;
-    let timeTotal = 0;
-    
+    let timeTotal  = 0;
+
+    // Each TicketCost record has its own actiontime, cost_fixed, and cost_time (hourly rate).
+    // GLPI formula: time_cost = cost_time (€/h) × (actiontime_seconds / 3600)
     ticketCosts.forEach(cost => {
-      const fixedVal = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.'));
-      const timeVal = parseFloat(String(cost.cost_time?.value || cost.cost_time || 0).replace(',', '.'));
-      
-      fixedTotal += isNaN(fixedVal) ? 0 : fixedVal;
-      timeTotal += isNaN(timeVal) ? 0 : timeVal;
+      const fixedVal   = parseFloat(String(cost.cost_fixed?.value || cost.cost_fixed || 0).replace(',', '.')) || 0;
+      const rateVal    = parseFloat(String(cost.cost_time?.value  || cost.cost_time  || 0).replace(',', '.')) || 0;
+      const seconds    = parseInt(String(cost.actiontime?.value   || cost.actiontime || 0), 10) || 0;
+      fixedTotal += fixedVal;
+      timeTotal  += rateVal * (seconds / 3600);
     });
-    
+
     return { fixedCostTotal: fixedTotal, timeCostTotal: timeTotal };
   }, [ticketCosts]);
 
@@ -247,7 +249,7 @@ export default function TicketDetailView({ ticketId, onClose, onSaved }) {
     try {
       let refusalComment = '';
       if (!isApproved) {
-        refusalComment = window.prompt("Motif du refus (optionnel) :");
+        refusalComment = window.prompt("Motif ");
         if (refusalComment === null) return; 
       }
       if (refusalComment && refusalComment.trim() !== '') {

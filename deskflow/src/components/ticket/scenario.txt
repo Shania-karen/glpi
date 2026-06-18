@@ -1,0 +1,8 @@
+scenario 
+Termine ticket 1 50 ok
+temrine ticket 2 150 OK
+ouvrir ticket 1 5% mode 1 OK
+termine ticket 1 46 OK
+ouvrir ticket 1 10% mode 4 OK
+ouvrir ticket 2 10% mode 3
+TERMINE TICKET 2 300

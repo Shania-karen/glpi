@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { purgeSelectedTables } from '../../utils/resetHelper';
 import { H3, P, Button, Card, Alert } from '../templates';
 
+const SPRING_API = '/api';
+
 export default function ResetForm({ onResetComplete }) {
   const tableGroups = [
     {
@@ -66,6 +68,12 @@ export default function ResetForm({ onResetComplete }) {
     }
   ];
 
+  // Tables SQLite (Spring Boot) — table unifiée "couts"
+  const sqliteTables = [
+    { label: "Coûts (SuperCout + Réouverture)", key: 'couts', endpoint: `${SPRING_API}/couts` },
+  ];
+  const [selectedSqlite, setSelectedSqlite] = useState([]);
+
   const [selectedTables, setSelectedTables] = useState([]);
   const [isPurging, setIsPurging] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -96,12 +104,12 @@ export default function ResetForm({ onResetComplete }) {
   const handleResetSubmit = async (e) => {
     e.preventDefault();
 
-    if (selectedTables.length === 0) {
+    if (selectedTables.length === 0 && selectedSqlite.length === 0) {
       alert("Veuillez selectionner au moins une table a reinitialiser.");
       return;
     }
     const confirm = window.confirm(
-      "ATTENTION : Vous etes sur le point de supprimer DEFINITIVEMENT toutes les donnees des tables selectionnees via l'API. Cette action est irreversible. Voulez-vous continuer ?"
+      "ATTENTION : Vous etes sur le point de supprimer DEFINITIVEMENT toutes les donnees des tables selectionnees. Cette action est irreversible. Voulez-vous continuer ?"
     );
     if (!confirm) return;
 
@@ -109,13 +117,42 @@ export default function ResetForm({ onResetComplete }) {
     setStatusMessage('Demarrage de la purge...');
 
     try {
-      const deletedCount = await purgeSelectedTables(selectedTables, (message, current, total) => {
-        setStatusMessage(`${message} (${current}/${total})`);
-      });
+      let deletedCount = 0;
+
+      // 1. Purge tables GLPI
+      if (selectedTables.length > 0) {
+        deletedCount += await purgeSelectedTables(selectedTables, (message, current, total) => {
+          setStatusMessage(`${message} (${current}/${total})`);
+        });
+      }
+
+      // 2. Purge tables SQLite (Spring Boot) — table unifiée "couts"
+      for (const key of selectedSqlite) {
+        const table = sqliteTables.find(t => t.key === key);
+        if (!table) continue;
+        setStatusMessage(`Purge SQLite : ${table.label}...`);
+        try {
+          const res = await fetch(table.endpoint);
+          if (res.ok) {
+            const items = await res.json();
+            // La clé primaire de la table unifiée est idAuto
+            for (const item of (Array.isArray(items) ? items : [])) {
+              const itemId = item.idAuto ?? item.id;
+              if (itemId !== undefined && itemId !== null) {
+                await fetch(`${table.endpoint}/${itemId}`, { method: 'DELETE' });
+                deletedCount++;
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Erreur purge SQLite ${table.label}:`, err);
+        }
+      }
 
       alert(`Reinitialisation terminee.\n${deletedCount} element(s) supprime(s).`);
       if (onResetComplete) onResetComplete();
       setSelectedTables([]);
+      setSelectedSqlite([]);
 
     } catch (error) {
       alert(`Erreur lors de la reinitialisation : ${error.message}`);
@@ -171,9 +208,44 @@ export default function ResetForm({ onResetComplete }) {
             })}
           </div>
 
+          {/* Section SQLite (Spring Boot) */}
+          <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
+            <div className="flex items-center justify-between mb-3 border-b border-purple-100 pb-2">
+              <h4 className="font-semibold text-purple-800">Coûts SQLite (Spring Boot)</h4>
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-purple-500 hover:text-purple-800 font-medium">
+                <input
+                  type="checkbox"
+                  checked={selectedSqlite.length === sqliteTables.length}
+                  onChange={(e) => setSelectedSqlite(e.target.checked ? sqliteTables.map(t => t.key) : [])}
+                  disabled={isPurging}
+                  className="accent-purple-600"
+                />
+                Tout sélectionner
+              </label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {sqliteTables.map((table) => (
+                <label key={table.key} className="flex items-center gap-2 cursor-pointer text-sm text-purple-700">
+                  <input
+                    type="checkbox"
+                    checked={selectedSqlite.includes(table.key)}
+                    onChange={() => setSelectedSqlite(prev =>
+                      prev.includes(table.key)
+                        ? prev.filter(k => k !== table.key)
+                        : [...prev, table.key]
+                    )}
+                    disabled={isPurging}
+                    className="accent-purple-600"
+                  />
+                  {table.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
           <Button
             type="submit"
-            disabled={isPurging || selectedTables.length === 0}
+            disabled={isPurging || (selectedTables.length === 0 && selectedSqlite.length === 0)}
           >
             {isPurging ? 'Purge en cours...' : 'Vider les tables selectionnees'}
           </Button>

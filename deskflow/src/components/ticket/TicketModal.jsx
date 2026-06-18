@@ -40,7 +40,7 @@ export default function TicketModal({ ticket, users, assets, onClose, onSaved })
       
       const allowedFields = [
         'id', 'name', 'content', 'date', 'type', 'itilcategories_id', 
-        'status', 'requesttypes_id', 'external_id', 'urgency', 'impact', 
+        'status', 'requesttypes_id', 'externalid', 'urgency', 'impact', 
         'priority', 'actiontime'
       ];
       

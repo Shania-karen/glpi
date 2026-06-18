@@ -1,0 +1,5 @@
+mode de calcul , % reouverture 
+mode 1 ,  ON PREND LE DERNIER COUt DE SUPERCOST ( logique change pas) 
+mode 2 , on prend le premier cout de supercost
+mode 3 , on fait la moyenne des couts de supercost 
+mode 4 , somme cout supercost

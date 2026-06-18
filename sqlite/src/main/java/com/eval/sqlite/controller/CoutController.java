@@ -40,6 +40,8 @@ public class CoutController {
         return coutRepository.findByIdTicket(idTicket);
     }
 
+
+
     @GetMapping("/couts/byType/{typeCout}")
     public List<Cout> getByType(@PathVariable String typeCout) {
         return coutRepository.findByTypeCout(typeCout);
@@ -54,12 +56,47 @@ public class CoutController {
                      .orElse(ResponseEntity.notFound().build());
     }
 
+       @GetMapping("/couts/sum/{idTicket}/{typeCout}")
+    public Double getSum(
+            @PathVariable Long idTicket,
+            @PathVariable String typeCout) {
+       Double result = coutRepository.findSumByIdTicketAndTypeCout(idTicket, typeCout);
+        return result;
+    }
+
+       @GetMapping("/couts/average/{idTicket}/{typeCout}")
+    public Double getAverage(
+            @PathVariable Long idTicket,
+            @PathVariable String typeCout) {
+       Double result = coutRepository.findAverageByIdTicketAndTypeCout(idTicket, typeCout);
+        return result;
+    }
+
+   @GetMapping("/couts/first/{idTicket}/{typeCout}")
+    public ResponseEntity<Cout> getFirst(
+            @PathVariable Long idTicket,
+            @PathVariable String typeCout) {
+        Optional<Cout> result = coutRepository.findFirstByIdTicketAndTypeCout(idTicket, typeCout);
+        return result.map(ResponseEntity::ok)
+                     .orElse(ResponseEntity.notFound().build());
+    }
+    @GetMapping("/couts/firstGroup/{idTicket}/{typeCout}")
+    public List<Cout> getFirstGroup(
+            @PathVariable Long idTicket,
+            @PathVariable String typeCout) {
+        return coutRepository.findAllFirstGroupByIdTicketAndTypeCout(idTicket, typeCout);
+    }
+
+
     @GetMapping("/couts/latestGroup/{idTicket}/{typeCout}")
     public List<Cout> getLatestGroup(
             @PathVariable Long idTicket,
             @PathVariable String typeCout) {
         return coutRepository.findAllLatestGroupByIdTicketAndTypeCout(idTicket, typeCout);
     }
+
+
+    
 
     @PostMapping("/couts")
     public Cout create(@RequestBody Cout cout) {

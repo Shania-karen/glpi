@@ -1,0 +1,11 @@
+creer une nouvelle page import 
+le fichier .csv va contenir  3 colonnes dont:
+ticket , mouvement , valeur 
+
+ex de données dans le csv : 2 , open , 5.5 => ticket id  2 reouverture avec 5.5 %
+
+2 , cancel ,  => annuler ticket numero 2
+
+2 , close , 100 => termine ticket 2 avec cout 
+
+

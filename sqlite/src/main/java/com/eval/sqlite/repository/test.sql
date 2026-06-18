@@ -1,0 +1,1 @@
+SELECT AVG(cout) FROM couts c WHERE c.id_ticket= 2000 AND c.type_cout = 'Supercout'

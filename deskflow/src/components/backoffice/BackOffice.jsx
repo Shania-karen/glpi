@@ -54,6 +54,17 @@ export default function BackOffice() {
           Importer des données dans GLPI
         </Button>
 
+        {/* ── Bouton Import SQLite ── */}
+        <Button
+          onClick={() => navigate('/backoffice/importSqlite')}
+          variant="outline"
+          onMouseOver={(e) => (e.currentTarget.style.opacity = '0.85')}
+          onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
+        >
+          <IconImport />
+          Importer des coûts dans SQLite (CSV)
+        </Button>
+
         {/* ── Bouton Couleurs ── */}
         <Button
           onClick={() => navigate('/backoffice/colors')}

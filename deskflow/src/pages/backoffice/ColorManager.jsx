@@ -52,7 +52,7 @@ export default function ColorManager() {
 
   const fetchColors = async () => {
     try {
-      const res = await fetch('http://localhost:8081/api/colors');
+      const res = await fetch('/api/colors');
       if (!res.ok) throw new Error('Failed to fetch colors');
       const data = await res.json();
       setColors(data);
@@ -91,7 +91,7 @@ export default function ColorManager() {
     }
     setMessage('');
     try {
-      const response = await fetch(`http://localhost:8081/api/colors/${id}`, {
+      const response = await fetch(`/api/colors/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete');
@@ -135,7 +135,7 @@ export default function ColorManager() {
         value: selectedTranslation,
       };
 
-      const response = await fetch('http://localhost:8081/api/colors', {
+      const response = await fetch('/api/colors', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export default function ColorManager() {
         body: JSON.stringify(payload),
       });
 
-      const responseTranslation = await fetch('http://localhost:8081/api/translations', {
+      const responseTranslation = await fetch('/api/translations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -25,12 +25,26 @@ public interface CoutRepository extends JpaRepository<Cout, Long> {
     /** Filtre par item */
     List<Cout> findByIdItem(Long idItem);
 
-    /**
-     * Dernier enregistrement (une seule ligne) pour un ticket+type,
-     * identifié par MAX(grp).
-     */
+    @Query("SELECT SUM(cout) FROM Cout c WHERE c.idTicket= :idTicket AND c.typeCout = :typeCout")
+    Double findSumByIdTicketAndTypeCout(
+        @Param("idTicket") Long idTicket,
+        @Param("typeCout") String typeCout
+    );
+
+    @Query("SELECT SUM(c.cout) / COUNT(DISTINCT c.grp) FROM Cout c WHERE c.idTicket = :idTicket AND c.typeCout = :typeCout")
+    Double findAverageByIdTicketAndTypeCout(
+        @Param("idTicket") Long idTicket,
+        @Param("typeCout") String typeCout
+    );
+  
     @Query("SELECT c FROM Cout c WHERE c.idTicket = :idTicket AND c.typeCout = :typeCout AND c.grp = (SELECT MAX(c2.grp) FROM Cout c2 WHERE c2.idTicket = :idTicket AND c2.typeCout = :typeCout)")
     Optional<Cout> findLatestByIdTicketAndTypeCout(
+        @Param("idTicket") Long idTicket,
+        @Param("typeCout") String typeCout
+    );
+
+      @Query("SELECT c FROM Cout c WHERE c.idTicket = :idTicket AND c.typeCout = :typeCout AND c.grp = (SELECT MIN(c2.grp) FROM Cout c2 WHERE c2.idTicket = :idTicket AND c2.typeCout = :typeCout)")
+    Optional<Cout> findFirstByIdTicketAndTypeCout(
         @Param("idTicket") Long idTicket,
         @Param("typeCout") String typeCout
     );
@@ -44,6 +58,20 @@ public interface CoutRepository extends JpaRepository<Cout, Long> {
         @Param("idTicket") Long idTicket,
         @Param("typeCout") String typeCout
     );
+
+       @Query("SELECT c FROM Cout c WHERE c.idTicket = :idTicket AND c.typeCout = :typeCout AND c.grp = (SELECT MIN(c2.grp) FROM Cout c2 WHERE c2.idTicket = :idTicket AND c2.typeCout = :typeCout)")
+    List<Cout> findAllFirstGroupByIdTicketAndTypeCout(
+        @Param("idTicket") Long idTicket,
+        @Param("typeCout") String typeCout
+    );
+
+      @Query("SELECT MIN(c.grp) FROM Cout c WHERE c.idTicket = :idTicket AND c.typeCout = :typeCout")
+    Optional<Long> findMinGrpByIdTicketAndTypeCout(
+        @Param("idTicket") Long idTicket,
+        @Param("typeCout") String typeCout
+    );
+
+
 
     /**
      * MAX(grp) pour un ticket+type — retourne le timestamp du dernier groupe.

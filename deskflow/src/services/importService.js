@@ -1055,6 +1055,7 @@ export async function phase3_import(equipements, tickets, couts, images, dicts, 
           priority: getMapValue(TICKET_PRIORITY_MAP, t.priority, 3),
           urgency: getMapValue(TICKET_PRIORITY_MAP, t.priority, 3),
           impact: getMapValue(TICKET_PRIORITY_MAP, t.priority, 3),
+          externalid: String(t.refTicket),
         },
       };
       const res = await safePost('Ticket', payload);

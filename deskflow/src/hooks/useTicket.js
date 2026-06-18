@@ -100,9 +100,14 @@ export function useTickets() {
               matchedTask = availableTasks.shift();
             }
 
+            // CRITICAL: use the TicketCost's own actiontime (duration of the cost),
+            // NOT the matched task's actiontime.
+            // GLPI formula: time_cost = cost_time (hourly rate) × (cost.actiontime / 3600)
+            const costActiontime = parseInt(String(cost.actiontime?.value || cost.actiontime || 0), 10) || 0;
+
             unrolledLines.push({
               ...ticket,
-              actiontime: matchedTask ? parseInt(matchedTask.actiontime?.value || matchedTask.actiontime || 0, 10) : 0,
+              actiontime: costActiontime,
               cost_fixed: costFixedVal,
               cost_time: costTimeVal
             });

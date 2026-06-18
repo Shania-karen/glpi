@@ -203,7 +203,7 @@ export default function TicketFiche({ ticketId, open, onClose, onSaved }) {
     try {
       let refusalComment = '';
       if (!isApproved) {
-        refusalComment = window.prompt("Motif du refus (optionnel) :");
+        refusalComment = window.prompt("Motif  :");
         if (refusalComment === null) return; 
       }
       if (refusalComment && refusalComment.trim() !== '') {

@@ -92,7 +92,7 @@ export default function TicketApprovalModal({ ticketId, open, onClose, onSuccess
           input: {
             items_id: ticketId,
             itemtype: 'Ticket',
-            content: `Refus de clôture. Motif : ${refusalReason}`
+            content: `Refus de  : ${refusalReason}`
           }
         }
       });
@@ -150,7 +150,7 @@ export default function TicketApprovalModal({ ticketId, open, onClose, onSuccess
             <form onSubmit={handleRefuseSubmit} className="space-y-3 pt-3 border-t border-neutral-100">
               <div>
                 <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
-                  Motif du refus (Obligatoire)
+                  Motif 
                 </label>
                 <textarea
                   required

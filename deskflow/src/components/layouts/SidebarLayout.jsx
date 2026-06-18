@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { TicketIcon, HomeIcon, ResetIcon, DashboardIcon, BackOfficeIcon, ImportIcon, ElementIcon ,SettingIcon} from '../templates';
+import { TicketIcon, HomeIcon, ResetIcon, DashboardIcon, BackOfficeIcon, MoneyIcon, ElementIcon ,SettingIcon} from '../templates';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function SidebarLayout() {
@@ -15,11 +15,13 @@ export default function SidebarLayout() {
     
     !isBackOfficeAuth && { to: '/tickets/new', label: t('nouveau_ticket', 'Nouveau Ticket'), icon: TicketIcon },
     !isBackOfficeAuth && { to: '/mes-elements', label: t('liste_elements', 'Liste des Éléments'), icon: ElementIcon },
+    !isBackOfficeAuth && { to: '/list-costs', label: t('list_costs_title', 'Liste des Coûts'), icon: MoneyIcon },
     !isBackOfficeAuth && { to: '/backoffice', label: t('backoffice', 'BackOffice'), icon: BackOfficeIcon },
     !isBackOfficeAuth && { to: '/tickets/kanban', label: t('kanban_title', 'Tickets Kanban'), icon: TicketIcon },  
     isBackOfficeAuth && { to: '/reset', label: t('reset', 'Reset'), icon: ResetIcon },
     isBackOfficeAuth && { to: '/backoffice', label: t('backoffice', 'BackOffice'), icon: BackOfficeIcon },
     isBackOfficeAuth && { to: '/dashboard', label: t('dashboard', 'Dashboard'), icon: DashboardIcon},
+    isBackOfficeAuth && { to: '/list-costs', label: t('list_costs_title', 'Liste des Coûts'), icon: MoneyIcon },
     isBackOfficeAuth && { to: '/tickets', label: t('tickets', 'Tickets'), icon: TicketIcon },
     isBackOfficeAuth && { to: 'backoffice/colors', label: t('configuration', 'Configuration'), icon: SettingIcon}
     

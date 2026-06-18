@@ -10,8 +10,12 @@ import Dashboard from './components/backoffice/Dashboard';
 import ImportData from './pages/backoffice/Import';
 import TicketKanban from './components/ticket/TicketKanban';
 import AssetList from './pages/frontoffice/AssetList';
+import AssetListWithPrice from './components/ticket/AssetListWithPrice';
 import TicketCreate from './pages/frontoffice/TicketCreate';
 import ColorManager from './pages/backoffice/ColorManager';
+import Import from './pages/backoffice/ImportSqlite';
+import ListCosts from './pages/frontoffice/ListCosts';
+
 
 function App() {
   return (
@@ -22,12 +26,17 @@ function App() {
           <Route path="tickets" element={<ProtectedRoute><TicketList /></ProtectedRoute>} />
           <Route path="tickets/new" element={<TicketCreate />} />
           <Route path="mes-elements" element={<AssetList />} />
+          <Route path="mes-elements-prix" element={<AssetListWithPrice />} />
+          <Route path="list-costs" element={<ListCosts />} />
           <Route path="exemple" element={<ExempleUI />} />
           <Route path="tickets/kanban" element={<TicketKanban />} />  
           <Route path="backoffice" element={<ProtectedRoute><BackOffice /></ProtectedRoute>} />
-          <Route path="reset" element={<ProtectedRoute><ResetForm /></ProtectedRoute>} />
+          <Route path="reset" element={<ProtectedRoute><ResetForm /></ProtectedRoute>} />         
           <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="backoffice/import" element={<ProtectedRoute><ImportData /></ProtectedRoute>} />
+          <Route path="backoffice/importSqlite" element={<Import />} />
+          
+
           <Route path="backoffice/colors" element={<ProtectedRoute><ColorManager /></ProtectedRoute>} />
         </Route>
       </Routes>

@@ -110,21 +110,21 @@ export default function Import() {
     setImportResult(null);
     try {
       setPhase('PARSING');
-      addLog('📂 Phase 1 : Extraction et nettoyage...');
+      addLog(' Phase 1 : Extraction et nettoyage...');
       const { equipements, tickets, couts, images } = await phase1_extract(
         files.csv1, files.csv2, files.csv3, files.zip
       );
       addLog(`  → ${equipements.length} équipement(s), ${tickets.length} ticket(s), ${couts.length} coût(s), ${Object.keys(images).length} image(s).`);
 
       setPhase('DRY_RUN');
-      addLog('🔍 Phase 2 : Dry Run (validation sans écriture)...');
+      addLog(' Phase 2 : Dry Run (validation sans écriture)...');
       const dryResult = await phase2_dryRun(equipements, tickets, couts, addLog);
 
       if (!dryResult.valid) {
         setValidationErrors(dryResult.errors);
         setPhase('ERRORS');
         dryResult.errors.forEach(err => addLog(`  [Validation] ${err}`));
-        addLog(`❌ ${dryResult.errors.length} erreur(s) détectée(s). Import annulé.`);
+        addLog(` ${dryResult.errors.length} erreur(s) détectée(s). Import annulé.`);
         return;
       }
 

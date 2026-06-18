@@ -1,22 +1,29 @@
-# Guide des Fonctions Utilitaires SQLite pour Spring Boot
+# Guide Complet des Fonctions Utilitaires SQLite
 
-Ce document regroupe des scénarios pratiques et des fonctions utilitaires pour interagir avec la base de données SQLite de l'application. SQLite étant une base de données fichier (ici stockée dans le fichier `deskflow` à la racine du sous-dossier `sqlite`), nous pouvons tirer parti de sa légèreté pour implémenter des fonctionnalités de réinitialisation, de sauvegarde/restauration à chaud et d'exécution de requêtes natives.
+Ce guide regroupe toutes les fonctions utilitaires pour administrer, sauvegarder, restaurer et réinitialiser la base de données locale **SQLite** de l'application via **Spring Boot** (Backend) et **React** (Frontend).
 
 ---
 
-## Scénario 1 : Réinitialisation et Réensemencement Dynamique (Reset & Seed)
+## 1. Structure Globale de l'Architecture
 
-### Objectif
-Exposer un point d'accès API (Endpoint) qui permet de vider toutes les tables de la base de données (Utilisateurs, Couleurs, Traductions) et de restaurer le jeu de données par défaut. Utile pour les phases de tests ou pour faire une démonstration à l'évaluateur.
+Les utilitaires sont répartis entre le backend (Spring Boot pour les opérations système et SQL de bas niveau) et le frontend (React pour déclencher les actions).
 
-### Fichiers à modifier / créer
+```mermaid
+graph TD
+    React[Interface React Admin] -->|Requête HTTP POST| Controller[Contrôleurs REST Spring Boot]
+    Controller -->|Appel Service| Service[Services SQLite / JdbcTemplate]
+    Service -->|Copie physique / Requête SQL| DB[(Fichier SQLite: deskflow)]
+```
 
-1. **[Nouveau]** Créer le contrôleur REST `DatabaseResetController.java` dans le package `com.eval.sqlite.controller` :
-   - Path complet : `sqlite/src/main/java/com/eval/sqlite/controller/DatabaseResetController.java`
+---
 
-### Implémentation du code Java
+## 2. Implémentation Backend (Spring Boot — Java)
 
-Créez le fichier avec le contenu suivant :
+### 2.1. Contrôleur de Réinitialisation et Réensemencement (`DatabaseResetController.java`)
+*Fichier :* `sqlite/src/main/java/com/eval/sqlite/controller/DatabaseResetController.java`
+
+> [!IMPORTANT]
+> Ce contrôleur vide toutes les données des tables de configuration locales et réinitialise les séquences d'auto-incrémentation.
 
 ```java
 package com.eval.sqlite.controller;
@@ -56,7 +63,7 @@ public class DatabaseResetController {
     public Map<String, Object> resetDatabase() {
         Map<String, Object> response = new HashMap<>();
         try {
-            // 1. Vider les tables via JPA
+            // 1. Vider les tables
             translationRepository.deleteAll();
             colorRepository.deleteAll();
             userRepository.deleteAll();
@@ -66,18 +73,12 @@ public class DatabaseResetController {
 
             // 3. Réensemencer les traductions par défaut
             translationRepository.saveAll(Arrays.asList(
-                // Français
                 new Translation("fr", "nouveau", "Nouveau"),
                 new Translation("fr", "in_progress", "En cours"),
                 new Translation("fr", "termine", "Terminé"),
-                new Translation("fr", "en_attente", "En Attente"),
-                new Translation("fr", "assignes", "Assignés"),
-                
-                // Malagasy
                 new Translation("mg", "nouveau", "Vaovao"),
                 new Translation("mg", "in_progress", "An-dalana"),
-                new Translation("mg", "termine", "Vita"),
-                new Translation("mg", "en_attente", "Miandry")
+                new Translation("mg", "termine", "Vita")
             ));
 
             // 4. Réensemencer les couleurs par défaut
@@ -87,10 +88,10 @@ public class DatabaseResetController {
                 new Color("#ef4444", "termine", "Vita")
             ));
 
-            // 5. Réensemencer un utilisateur par défaut
+            // 5. Réensemencer l'utilisateur par défaut
             AppUser defaultUser = new AppUser();
             defaultUser.setUsername("admin");
-            defaultUser.setPassword("admin123"); // Idéalement haché
+            defaultUser.setPassword("admin123");
             userRepository.save(defaultUser);
 
             response.put("success", true);
@@ -104,22 +105,11 @@ public class DatabaseResetController {
 }
 ```
 
-### Comment l'appeler depuis le Frontend
-Faire une requête HTTP `POST` sur `http://localhost:8081/api/db/reset`.
+### 2.2. Contrôleur de Sauvegarde et Restauration Physique (`DatabaseBackupController.java`)
+*Fichier :* `sqlite/src/main/java/com/eval/sqlite/controller/DatabaseBackupController.java`
 
----
-
-## Scénario 2 : Sauvegarde (Backup) et Restauration Physique du Fichier SQLite
-
-### Objectif
-SQLite stockant toutes ses données dans un unique fichier physique nommé `deskflow`, la méthode la plus rapide et fiable pour faire un backup ou restaurer l'état est de copier ce fichier.
-
-### Fichiers à modifier / créer
-
-1. **[Nouveau]** Créer le contrôleur `DatabaseBackupController.java` :
-   - Path complet : `sqlite/src/main/java/com/eval/sqlite/controller/DatabaseBackupController.java`
-
-### Implémentation du code Java
+> [!TIP]
+> SQLite stockant les données dans un seul fichier physique `deskflow`, la méthode la plus rapide et fiable de sauvegarde/restauration consiste à faire une copie physique de ce fichier.
 
 ```java
 package com.eval.sqlite.controller;
@@ -137,9 +127,10 @@ import java.util.Map;
 @RequestMapping("/api/db/backup")
 public class DatabaseBackupController {
 
-    private final String DB_FILE_PATH = "deskflow"; // Nom du fichier SQLite défini dans application.properties
+    private final String DB_FILE_PATH = "deskflow";
     private final String BACKUP_FILE_PATH = "deskflow.bak";
 
+    // 1. Sauvegarde physique du fichier SQLite
     @PostMapping("/create")
     public Map<String, Object> createBackup() {
         Map<String, Object> response = new HashMap<>();
@@ -148,15 +139,14 @@ public class DatabaseBackupController {
 
         if (!dbFile.exists()) {
             response.put("success", false);
-            response.put("message", "Le fichier de base de données n'existe pas encore à l'emplacement : " + dbFile.getAbsolutePath());
+            response.put("message", "Le fichier de BDD n'existe pas : " + dbFile.getAbsolutePath());
             return response;
         }
 
         try {
-            // Copie physique à chaud du fichier SQLite
             Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             response.put("success", true);
-            response.put("message", "Sauvegarde créée avec succès sous " + backupFile.getName());
+            response.put("message", "Sauvegarde créée avec succès : " + backupFile.getName());
             response.put("sizeBytes", backupFile.length());
         } catch (IOException e) {
             response.put("success", false);
@@ -165,6 +155,7 @@ public class DatabaseBackupController {
         return response;
     }
 
+    // 2. Restauration du fichier SQLite
     @PostMapping("/restore")
     public Map<String, Object> restoreBackup() {
         Map<String, Object> response = new HashMap<>();
@@ -173,15 +164,14 @@ public class DatabaseBackupController {
 
         if (!backupFile.exists()) {
             response.put("success", false);
-            response.put("message", "Aucun fichier de sauvegarde trouvé sous " + backupFile.getAbsolutePath());
+            response.put("message", "Aucun fichier de sauvegarde trouvé.");
             return response;
         }
 
         try {
-            // Restauration du fichier
             Files.copy(backupFile.toPath(), dbFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             response.put("success", true);
-            response.put("message", "Restauration effectuée avec succès depuis " + backupFile.getName());
+            response.put("message", "Restauration effectuée avec succès.");
         } catch (IOException e) {
             response.put("success", false);
             response.put("error", e.getMessage());
@@ -191,19 +181,8 @@ public class DatabaseBackupController {
 }
 ```
 
----
-
-## Scénario 3 : Console de requêtes SQL Natives (Lecture seule de sécurité)
-
-### Objectif
-Permettre à un administrateur d'exécuter des requêtes de type `SELECT` brutes sur SQLite via un Endpoint sécurisé (pour vérifier le schéma, inspecter la table `sqlite_master` ou compter des lignes sans repasser par JPA).
-
-### Fichiers à modifier / créer
-
-1. **[Nouveau]** Créer le contrôleur `DatabaseQueryController.java` :
-   - Path complet : `sqlite/src/main/java/com/eval/sqlite/controller/DatabaseQueryController.java`
-
-### Implémentation du code Java
+### 2.3. Contrôleur de Requêtes SQL Natives en Lecture Seule (`DatabaseQueryController.java`)
+*Fichier :* `sqlite/src/main/java/com/eval/sqlite/controller/DatabaseQueryController.java`
 
 ```java
 package com.eval.sqlite.controller;
@@ -223,10 +202,6 @@ public class DatabaseQueryController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    /**
-     * Exécute une requête SQL SELECT brute fournie en paramètre.
-     * Pour des raisons de sécurité évidentes, la requête doit commencer par 'SELECT'.
-     */
     @PostMapping
     public Map<String, Object> executeQuery(@RequestBody Map<String, String> payload) {
         Map<String, Object> response = new HashMap<>();
@@ -238,11 +213,11 @@ public class DatabaseQueryController {
             return response;
         }
 
-        // Vérification de sécurité élémentaire : Lecture seule
+        // Sécurité élémentaire : Lecture seule
         String cleanSql = sql.trim().toUpperCase();
         if (!cleanSql.startsWith("SELECT") && !cleanSql.startsWith("PRAGMA")) {
             response.put("success", false);
-            response.put("error", "Seules les requêtes SELECT et PRAGMA sont autorisées via cet endpoint pour des raisons de sécurité.");
+            response.put("error", "Seules les requêtes SELECT et PRAGMA sont autorisées via cet endpoint.");
             return response;
         }
 
@@ -260,10 +235,67 @@ public class DatabaseQueryController {
 }
 ```
 
-### Exemple de corps de requête HTTP POST
-```json
-{
-  "sql": "SELECT name FROM sqlite_master WHERE type='table'"
+---
+
+## 3. Implémentation Frontend (React — JavaScript)
+
+Voici le code JavaScript à placer dans un fichier d'API de service (par exemple `src/services/sqliteAdminService.js`) pour appeler les utilitaires backend :
+
+```javascript
+const API_BASE_URL = 'http://localhost:8081/api/db';
+
+/**
+ * Réinitialise la base SQLite aux valeurs d'usine
+ */
+export async function resetDatabase() {
+  const response = await fetch(`${API_BASE_URL}/reset`, { method: 'POST' });
+  if (!response.ok) throw new Error("Erreur de réinitialisation");
+  return await response.json();
+}
+
+/**
+ * Sauvegarde physique de la base de données
+ */
+export async function backupDatabase() {
+  const response = await fetch(`${API_BASE_URL}/backup/create`, { method: 'POST' });
+  if (!response.ok) throw new Error("Erreur de sauvegarde");
+  return await response.json();
+}
+
+/**
+ * Restaure la base de données
+ */
+export async function restoreDatabase() {
+  const response = await fetch(`${API_BASE_URL}/backup/restore`, { method: 'POST' });
+  if (!response.ok) throw new Error("Erreur de restauration");
+  return await response.json();
+}
+
+/**
+ * Exécute une requête SELECT SQL native brute sur SQLite
+ */
+export async function executeRawSelect(sqlQuery) {
+  const response = await fetch(`${API_BASE_URL}/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sql: sqlQuery })
+  });
+  if (!response.ok) throw new Error("Erreur de requête");
+  return await response.json();
 }
 ```
-Cette requête renvoie la liste de toutes les tables créées dans votre base SQLite.
+
+---
+
+## 4. Utilitaires d'Administration en Ligne de Commande (CLI)
+
+Si vous devez faire des diagnostics rapides de la base de données SQLite à l'aide de l'outil `sqlite3` :
+
+| Action | Commande SQLite CLI |
+|--------|---------------------|
+| Se connecter à la base | `sqlite3 deskflow` |
+| Afficher les tables | `.tables` |
+| Afficher le schéma d'une table | `.schema name_of_table` |
+| Activer le mode colonne lisible | `.mode column` et `.headers on` |
+| Optimiser la taille du fichier | `VACUUM;` |
+| Quitter l'outil CLI | `.exit` |
