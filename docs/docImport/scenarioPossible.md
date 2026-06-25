@@ -133,3 +133,9 @@ export async function cancelTicketCosts(ticketId, options = {}) {
   return createdIds;
 }
 ```
+---
+
+## Scénario 4 : Ajout de frais fixes de réouverture
+La consigne : "Lors de la réouverture d'un ticket, en plus du coût calculé par le pourcentage, on ajoute des frais de dossier fixes (par exemple 15€) répartis équitablement sur chaque équipement concerné par la réouverture."
+
+La solution détaillée est disponible dans le fichier dédié [scenario_frais_reouverture.md](file:///d:/shania/itu/L3/glpi/docs/docImport/scenario_frais_reouverture.md).

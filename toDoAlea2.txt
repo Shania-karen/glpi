@@ -1,0 +1,14 @@
+ creer une nouvelle page qui va lister tous les reouvertures et supercost existant 
+(seulement liste de reouverture ), avec un boutton pour modifier reouverture et 
+supercost 
+On peut modifier valeur(pourcentage) et mode pour reouverture et cout pour supercost, quand on valide la modification
+y a donc calcule. 
+Ce qu il faut prendre en compte , SI PAR Exemple on deja une liste de 6 reouverture 
+et qu on modifie le mode de reouverture du 2e reouverture , on ignore les autres
+reouverture ( 3e , 4e, 5e et 6e) mais on prend seulement en compte le 1er , puisque
+la reouverture concerné c est seulement le 2e.
+
+Pour l affichage de la liste donc c est ligne par ligne 
+exemple : reouverture , mode 4 , 5 
+supercost , 200 
+

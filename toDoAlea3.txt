@@ -1,0 +1,26 @@
+dans list modifiable 
+ajouter liste des annuler , boutton restaurer 
+Quand on restaure , ca va pas descendre en bas mais a sa place 
+exemple de scenario 
+ticket 1 close 400 
+ticket 1 annuler 
+ticket 2 close 20
+
+resultat liste des couts 
+ticket 2 close 20
+total 20
+
+on restaure ticket 1 
+
+resultat attendu 
+ticket 1 close 400 
+ticket 2 close 20
+
+total 420 
+
+nouveau parametre , plafond reouverture , (valeur en pourcentage)
+ex supercost 100 
+plafond 20,5% 
+Tsy mahazo miotra 20% calcul reouverture
+si ca depasse le plafond , on prend la limite , par exemple si on fait 30 
+on sait que limite = 20,5 , donc on change en 30

@@ -11,7 +11,8 @@ import {
 export async function closeTicketWithCosts(ticketId, totalCost, options = {}) {
   const { 
     updateGLPIStatus = true, 
-    followupContent = null 
+    followupContent = null ,
+    plafond = null
   } = options;
   
   const createdIds = [];
@@ -49,6 +50,7 @@ export async function closeTicketWithCosts(ticketId, totalCost, options = {}) {
       typeCout: 'Supercout',
       cout: totalCost,
       grp,
+      plafond
     });
     if (res?.idAuto) createdIds.push(res.idAuto);
   } else {
@@ -61,6 +63,7 @@ export async function closeTicketWithCosts(ticketId, totalCost, options = {}) {
         idItem: item.items_id ?? null,
         category: item.itemtype ?? null,
         grp,
+        plafond
       });
       if (res?.idAuto) createdIds.push(res.idAuto);
     }
@@ -88,6 +91,8 @@ export async function reopenTicketWithCosts(ticketId, percentage, options = {}) 
       idItem: entry.idItem ?? null,
       category: entry.category ?? null,
       grp,
+      mode :1,
+      valeur : percentage
     });
     if (res?.idAuto) createdIds.push(res.idAuto);
   }
@@ -121,6 +126,8 @@ export async function reopenTicketWithCostsModeTwo(ticketId, percentage, options
       idItem: entry.idItem ?? null,
       category: entry.category ?? null,
       grp,
+      mode :2,
+      valeur : percentage
     });
     if (res?.idAuto) createdIds.push(res.idAuto);
   }
@@ -156,6 +163,8 @@ export async function reopenTicketWithCostsModeThree(ticketId, percentage, optio
       idItem: entry.idItem ?? null,
       category: entry.category ?? null,
       grp,
+      mode :3,
+      valeur : percentage
     });
     if (res?.idAuto) createdIds.push(res.idAuto);
   }
@@ -193,6 +202,8 @@ export async function reopenTicketWithCostsModeFour(ticketId, percentage, option
       idItem: entry.idItem ?? null,
       category: entry.category ?? null,
       grp,
+      mode :4,
+      valeur : percentage
     });
     if (res?.idAuto) createdIds.push(res.idAuto);
   }

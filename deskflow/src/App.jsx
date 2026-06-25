@@ -15,7 +15,7 @@ import TicketCreate from './pages/frontoffice/TicketCreate';
 import ColorManager from './pages/backoffice/ColorManager';
 import Import from './pages/backoffice/ImportSqlite';
 import ListCosts from './pages/frontoffice/ListCosts';
-
+import ListModifiable from './pages/frontoffice/ListModifiable';
 
 function App() {
   return (
@@ -28,6 +28,7 @@ function App() {
           <Route path="mes-elements" element={<AssetList />} />
           <Route path="mes-elements-prix" element={<AssetListWithPrice />} />
           <Route path="list-costs" element={<ListCosts />} />
+          <Route path="listes-des-couts" element={<ListModifiable />} />
           <Route path="exemple" element={<ExempleUI />} />
           <Route path="tickets/kanban" element={<TicketKanban />} />  
           <Route path="backoffice" element={<ProtectedRoute><BackOffice /></ProtectedRoute>} />

@@ -5,7 +5,7 @@ export function generateTimestamp() {
   return Date.now();
 }
 
-export async function createCout({ idTicket, typeCout, cout, idItem = null, category = null, grp = null }) {
+export async function createCout({ idTicket, typeCout, cout, idItem = null, category = null, grp = null, mode = null , valeur=null, plafond=null }) {
   const payload = {
     idTicket: Number(idTicket),
     typeCout,
@@ -13,6 +13,9 @@ export async function createCout({ idTicket, typeCout, cout, idItem = null, cate
     idItem: idItem !== null ? Number(idItem) : null,
     category: category || null,
     grp: grp !== null ? Number(grp) : generateTimestamp(),
+    mode : mode!==null? Number(mode) : null,
+    valeur : valeur !==null ? Number(valeur) : null,
+    plafond : plafond !==null ? Number(plafond) : null,
   };
 
   const res = await fetch(`${SPRING_API}/couts`, {
@@ -28,6 +31,31 @@ export async function createCout({ idTicket, typeCout, cout, idItem = null, cate
 
   return res.json();
 }
+
+export async function updateCoutGroup(grp,{
+  typeCout , cout , mode , valeur,plafond
+}){
+  const payload={
+    typeCout,
+    cout : cout!== undefined ? Number(cout) :
+    undefined , 
+    mode : mode !== undefined ? Number (mode):
+    undefined,
+    valeur : valeur !==undefined ? Number(valeur): undefined,
+    plafond : plafond !==undefined ? Number(plafond): undefined
+  };
+ const res = await fetch(`${SPRING_API}/couts/group/${grp}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || 'Erreur lors de la modification du groupe de coûts');
+  }
+
+}
+
 
 export async function createSuperCoutsForItems(idTicket, totalCout, items) {
   const grp = generateTimestamp();
@@ -249,6 +277,16 @@ export async function deleteCoutsByTicket(idTicket) {
   if (!res.ok && res.status !== 404) {
     const text = await res.text();
     throw new Error(text || `Erreur suppression couts ticket #${idTicket}`);
+  }
+}
+
+export async function deleteCoutGroup(grp) {
+  const res = await fetch(`${SPRING_API}/couts/group/${grp}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text();
+    throw new Error(text || `Erreur suppression couts ticket #${grp}`);
   }
 }
 

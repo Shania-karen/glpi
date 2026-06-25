@@ -199,11 +199,13 @@ export default function ListCosts() {
             <Th>Supercost</Th>
             <Th>Réouverture</Th>
             <Th>Coût GLPI</Th>
+            <Th>Total</Th>
           </Tr>
         </thead>
         <tbody>
           {categories.map(cat => {
             const data = aggregated[cat] || { supercost: 0, reouverture: 0, glpi: 0 };
+            const totalRow = data.supercost + data.reouverture + data.glpi;
             return (
               <Tr 
                 key={cat} 
@@ -216,6 +218,7 @@ export default function ListCosts() {
                 <Td>{data.supercost.toFixed(2)} €</Td>
                 <Td>{data.reouverture.toFixed(2)} €</Td>
                 <Td>{data.glpi.toFixed(2)} €</Td>
+                <Td className="font-semibold text-neutral-900">{totalRow.toFixed(2)} €</Td>
               </Tr>
             );
           })}

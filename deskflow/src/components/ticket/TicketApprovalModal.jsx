@@ -50,10 +50,11 @@ export default function TicketApprovalModal({ element, ticketId, open, onClose, 
     try {
       const totalCout = parseFloat(formData.super_cost || 0);
       
-      // Appel du service centralisé unifié
+      const plafondVal= parseFloat(formData.plafond || 0);
       await closeTicketWithCosts(ticketId, totalCout, {
         updateGLPIStatus: true,
-        followupContent: `Motif : ${refusalReason}`
+        followupContent: `Motif : ${refusalReason}`,
+        plafond: plafondVal
       });
 
       onSuccess();
@@ -62,7 +63,7 @@ export default function TicketApprovalModal({ element, ticketId, open, onClose, 
     } finally {
       setSubmitting(false);
     }
-  };
+  };  
 
   if (!open) return null;
 
@@ -92,6 +93,20 @@ export default function TicketApprovalModal({ element, ticketId, open, onClose, 
                 name="super_cost"
                 onChange={handleChange}
                 value={formData.super_cost !== undefined ? formData.super_cost : 0}
+                placeholder="0.00"
+              />
+            </div>
+              <div>
+              <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
+                plafond
+              </label>
+               <Input
+                type="number"
+                step="0.01"
+                min="0"
+                name="plafond"
+                onChange={handleChange}
+                value={formData.plafond !== undefined ? formData.plafond : 0}
                 placeholder="0.00"
               />
             </div>

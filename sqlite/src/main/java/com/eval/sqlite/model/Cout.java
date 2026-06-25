@@ -33,7 +33,10 @@ public class Cout {
     private double cout;
     private Long   idItem;
     private String category;
-    private Long   grp;        // timestamp en millisecondes (généré côté front)
+    private Long   grp;   
+    private Integer mode;
+    private Double valeur;     // timestamp en millisecondes (généré côté front)
+    private Double plafond;
 
     public Cout() {}
 
@@ -59,4 +62,25 @@ public class Cout {
 
     public Long getGrp() { return grp; }
     public void setGrp(Long grp) { this.grp = grp; }
+
+    public Integer getMode() {
+        return mode;
+    }
+
+    public void setMode(Integer mode) {
+        this.mode = mode;
+    }
+
+    public Double getValeur() {
+        return valeur;
+    }
+
+    public void setValeur(Double valeur) {
+        this.valeur = valeur;
+    }
+
+    public Double getPlafond(){ return plafond;}
+    public void setPlafond(Double plafond){this.plafond=plafond;}
+
+
 }

@@ -1,0 +1,11 @@
+ticket 1 close 50 
+ticket 2 close 150
+ticket 1 open 5 % mode 1
+ticket 1 close 49
+
+modif 49 en 52
+modif 300 en 600
+modif 7,5 mode 4 en 15 mode 3
+
+valiny 832,675
+454,125
